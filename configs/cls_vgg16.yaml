@@ -1,0 +1,21 @@
+model : 'vgg16'
+dataset_name : tiny-imagenet
+num_classes : 200
+data_path : '/home/fssv2/myungsang/datasets/tiny_imagenet/tiny-imagenet-200/'
+save_dir : './saved' # dir for saving log, weights
+
+accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+workers: 32 # number of workers to generate data
+epochs: 1
+batch_size: 64
+
+save_freq: 5
+
+optimizer: 'adam'
+optimizer_options:
+  lr: 3e-3
+  weight_decay: 1e-5
+
+trainer_options:
+  check_val_every_n_epoch: 5
