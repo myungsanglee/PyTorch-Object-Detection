@@ -1,0 +1,1 @@
+C:/my_github/PyTorch-Object-Detection/data/test.jpg

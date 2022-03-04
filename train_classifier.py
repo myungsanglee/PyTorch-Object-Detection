@@ -38,6 +38,7 @@ def train(cfg):
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),
     ],)
+    
     data_module = tiny_imagenet.TinyImageNet(
         path=cfg['data_path'], workers=cfg['workers'],
         train_transforms=train_transforms, val_transforms=valid_transform,

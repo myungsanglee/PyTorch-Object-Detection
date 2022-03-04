@@ -57,3 +57,41 @@ def visualize(images, bboxes, batch_idx=0):
                                 (int(x2), int(y2)), (0, 255, 0))
     cv2.imshow('img', img)
     cv2.waitKey(0)
+
+
+def get_tagged_img(img, boxes, names_path):
+    """tagging result on img
+
+    Arguments:
+        img (Numpy Array): Image array
+        boxes (Tensor): boxes after performing NMS (None, 6)
+        names_path (String): path of label names file
+
+    Returns:
+        Numpy Array: tagged image array
+    """
+
+    width = img.shape[1]
+    height = img.shape[0]
+    with open(names_path, 'r') as f:
+        class_name_list = f.readlines()
+    class_name_list = [x.strip() for x in class_name_list]
+    for bbox in boxes:
+        class_name = class_name_list[int(bbox[0])]
+        confidence_score = bbox[1]
+        x = bbox[2]
+        y = bbox[3]
+        w = bbox[4]
+        h = bbox[5]
+        xmin = int((x - (w / 2)) * width)
+        ymin = int((y - (h / 2)) * height)
+        xmax = int((x + (w / 2)) * width)
+        ymax = int((y + (h / 2)) * height)
+
+        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=(0, 255, 0))
+        img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
+                          fontFace=cv2.FONT_HERSHEY_PLAIN,
+                          fontScale=1,
+                          color=(0, 255, 0))
+
+    return img
