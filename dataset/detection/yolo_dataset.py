@@ -5,7 +5,8 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
 import pytorch_lightning as pl
-from dataset.detection.utils import collater
+
+from dataset.detection.utils import collater, decode_predictions_numpy, non_max_suppression_numpy, get_tagged_img
 
 
 class YoloV1Dataset(Dataset):
@@ -115,8 +116,10 @@ if __name__ == '__main__':
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),
     ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
-
-    loader = DataLoader(YoloV1Dataset(train_transforms, 'C:/my_github/PyTorch-Object-Detection/data/train.txt', 3, 2),
+    num_classes = 3
+    num_boxes = 2
+    
+    loader = DataLoader(YoloV1Dataset(train_transforms, 'C:/my_github/PyTorch-Object-Detection/data/train.txt', num_classes, num_boxes),
                         batch_size=1, 
                         shuffle=False)
 
@@ -127,10 +130,14 @@ if __name__ == '__main__':
         img = sample['image'][0].numpy()   
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         
+        label = sample['label'].numpy()
+        boxes = non_max_suppression_numpy(decode_predictions_numpy(label, num_classes, num_boxes)[0])
+        
+        img = get_tagged_img(img, boxes, './data/test.names')
+        
         cv2.imshow('test', img)
         key = cv2.waitKey(0)
         if key == 27:
             break
     
     cv2.destroyAllWindows()
-        

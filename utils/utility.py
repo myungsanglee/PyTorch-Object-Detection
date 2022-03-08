@@ -21,5 +21,6 @@ def preprocess_input(image, mean=0., std=1., max_pixel=255.):
                   max_pixel) / (std * max_pixel)
     return torch.tensor(normalized).permute(2, 0, 1)
 
+
 if __name__ == '__main__':
     print(f'{make_divisible(32)}')
