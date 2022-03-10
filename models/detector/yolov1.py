@@ -152,22 +152,11 @@ class RegressionModel(nn.Module):
         return out.contiguous().view(b, 4, -1)
 
 
-class RetinaNet(nn.Module):
-
-    def __init__(self, Backbone, FPN, ClassificationSubNet, RegressionSubNet,
-                 num_classes, in_channels=3):
+class YoloV1(nn.Module):
+    def __init__(self, Backbone, num_classes, in_channels=3):
         super().__init__()
 
         self.backbone = Backbone(in_channels)
-
-        fpn_sizes = self.backbone.stage_channels[2:]
-        self.fpn = FPN(fpn_sizes)
-
-        feature_size = self.fpn.feature_size
-        self.classification = ClassificationSubNet(
-            num_classes, in_features=feature_size)
-
-        self.regression = RegressionSubNet(in_features=feature_size)
 
     def forward(self, x):
         # backbone forward
@@ -191,7 +180,7 @@ class RetinaNet(nn.Module):
 
 if __name__ == '__main__':
     from models.backbone.frostnet import FrostNet
-    model = RetinaNet(
+    model = YoloV1(
         Backbone=FrostNet,
         FPN=FeaturesPyramidNetwork,
         ClassificationSubNet=ClassificationModel,

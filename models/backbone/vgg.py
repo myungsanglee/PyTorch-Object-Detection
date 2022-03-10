@@ -1,5 +1,5 @@
-# import sys
-# sys.path.append('/home/fssv2/myungsang/my_projects/pytorch_object_detection')
+import sys
+sys.path.append('C:/my_github/PyTorch-Object-Detection')
 
 from models.layers.conv_block import Conv2dBn, Conv2dBnRelu
 from models.initialize import weight_initialize
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     model = vgg16_bn(in_channels=3, num_classes=200)
     # print(model(torch.rand(1, 3, 64, 64)))
     print(model)
-    torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
+    torchsummary.summary(model, (3, 448, 448), batch_size=1, device='cpu')
     
     # print(list(model.children()))
     # print(f'\n-------------------------------------------------------------\n')
