@@ -1,5 +1,6 @@
 from models.backbone.vovnet import VoVNet19, VoVNet27
 from models.backbone.vgg import vgg16, vgg16_bn
+from models.backbone.darknet import darknet19
 from models.detector.retinanet import ClassificationModel, RegressionModel
 from models.detector.fpn import FeaturesPyramidNetwork
 from torch import optim
@@ -12,7 +13,8 @@ def get_model(model_name):
                   'VoVNet19': VoVNet19, 
                   'VoVNet27': VoVNet27,
                   'vgg16': vgg16,
-                  'vgg16_bn': vgg16_bn}
+                  'vgg16_bn': vgg16_bn,
+                  'darknet19': darknet19}
     return model_dict.get(model_name)
 
 

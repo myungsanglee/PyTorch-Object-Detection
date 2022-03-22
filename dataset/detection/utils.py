@@ -1,3 +1,5 @@
+import time
+
 import torch
 import numpy as np
 import cv2
@@ -101,8 +103,8 @@ def intersection_over_union_numpy(boxes1, boxes2):
     """Calculation of intersection-over-union
 
     Arguments:
-        boxes1 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [x, y, w, h]
-        boxes2 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [x, y, w, h]
+        boxes1 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+        boxes2 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
 
     Returns:
         Numpy Array: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
@@ -130,11 +132,44 @@ def intersection_over_union_numpy(boxes1, boxes2):
     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
 
 
+def intersection_over_union(boxes1, boxes2):
+    """Calculation of intersection-over-union
+
+    Arguments:
+        boxes1 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+        boxes2 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+
+    Returns:
+        Tensor: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
+    """
+
+    box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+    box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+    box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+    box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+
+    box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+    box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+    box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+    box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+
+    inter_xmin = torch.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
+    inter_ymin = torch.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
+    inter_xmax = torch.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
+    inter_ymax = torch.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
+
+    inter_area = torch.clamp((inter_xmax - inter_xmin), 0, 1) * torch.clamp((inter_ymax - inter_ymin), 0, 1) # (batch, S, S, 1)
+    box1_area = torch.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
+    box2_area = torch.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
+
+    return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
+
+
 def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
     """Does Non Max Suppression given boxes
 
     Arguments:
-        boxes (Numpy Array): All boxes with each grid '(S*S, 6)', specified as [class_idx, confidence_score, x, y, w, h]
+        boxes (Numpy Array): All boxes with each grid '(S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
         iou_threshold (float): threshold where predicted boxes is correct
         conf_threshold (float): threshold to remove predicted boxes
 
@@ -165,6 +200,47 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
     return boxes_after_nms
 
 
+def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.4):
+    """Does Non Max Suppression given boxes
+
+    Arguments:
+        boxes (Tensor): All boxes with each grid '(S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
+        iou_threshold (float): threshold where predicted boxes is correct
+        conf_threshold (float): threshold to remove predicted boxes
+
+    Returns:
+        Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
+    """
+
+    # boxes smaller than the conf_threshold are removed
+    boxes = boxes[torch.where(boxes[..., 1] > conf_threshold)[0]]
+
+    # sort descending by confidence score
+    boxes = boxes[torch.argsort(-boxes[..., 1])]
+ 
+    # get boxes after nms
+    boxes_after_nms = []
+
+    while True:
+        chosen_box = boxes[:1, ...]
+        boxes_after_nms.append(chosen_box[0])
+        
+        tmp_boxes = []
+        for idx in range(1, boxes.shape[0]):
+            tmp_box = boxes[idx:idx+1, ...]
+            if tmp_box[0][0] != chosen_box[0][0]:
+                tmp_boxes.append(tmp_box[0])
+            elif torch.lt(intersection_over_union(chosen_box[..., 2:], tmp_box[..., 2:]), iou_threshold):
+                tmp_boxes.append(tmp_box[0])
+                
+        if tmp_boxes:
+            boxes = torch.stack(tmp_boxes)
+        else:
+            break
+
+    return torch.stack(boxes_after_nms)
+
+
 def decode_predictions_numpy(predictions, num_classes, num_boxes=2):
     """decodes predictions of the YOLO v1 model
     
@@ -173,19 +249,19 @@ def decode_predictions_numpy(predictions, num_classes, num_boxes=2):
     rather than relative to cell ratios.
 
     Arguments:
-        predictions (Tensor): predictions of the YOLO v1 model with shape  '(1, 7, 7, (num_boxes*5 + num_classes))'
+        predictions (Numpy): predictions of the YOLO v1 model with shape  '(1, 7, 7, (num_boxes*5 + num_classes))'
         num_classes: Number of classes in the dataset
         num_boxes: Number of boxes to predict
 
     Returns:
-        Tensor: boxes after decoding predictions each grid cell with shape '(batch, S*S, 6)', specified as [class_idx, confidence_score, x, y, w, h]
+        Numpy: boxes after decoding predictions each grid cell with shape '(batch, S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
     """
 
     # Get class indexes
     class_indexes = np.argmax(predictions[..., :num_classes], axis=-1) # (batch, S, S)
     class_indexes = np.expand_dims(class_indexes, axis=-1) # (batch, S, S, 1)
     class_indexes = class_indexes.astype(np.float32)
-    
+
     # Get best confidence one-hot
     confidences = []
     for idx in np.arange(num_boxes):
@@ -194,7 +270,7 @@ def decode_predictions_numpy(predictions, num_classes, num_boxes=2):
     confidences = np.array(confidences, np.float32) # (num_boxes, batch, S, S, 1)
     best_conf_idx = np.argmax(confidences, axis=0) # (batch, S, S, 1)
     best_conf_one_hot = np.reshape(np.eye(num_boxes)[best_conf_idx.reshape(-1).astype(np.int)], (best_conf_idx.shape[0], best_conf_idx.shape[1], best_conf_idx.shape[2], num_boxes)) # (batch, S, S, num_boxes)
-    
+
     # Get prediction box & confidence
     pred_box = np.zeros(shape=[1, 7, 7, 4])
     pred_conf = np.zeros(shape=[1, 7, 7, 1])
@@ -220,6 +296,64 @@ def decode_predictions_numpy(predictions, num_classes, num_boxes=2):
 
     # Get all bboxes
     pred_result = np.reshape(pred_result, (-1, 7*7, 6)) # (batch, S*S, 6)
+    
+    return pred_result
+
+
+def decode_predictions(predictions, num_classes, num_boxes=2):
+    """decodes predictions of the YOLO v1 model
+    
+    Converts bounding boxes output from Yolo with
+    an image split size of GRID into entire image ratios
+    rather than relative to cell ratios.
+
+    Arguments:
+        predictions (Tensor): predictions of the YOLO v1 model with shape  '(1, 7, 7, (num_boxes*5 + num_classes))'
+        num_classes: Number of classes in the dataset
+        num_boxes: Number of boxes to predict
+
+    Returns:
+        Tensor: boxes after decoding predictions each grid cell with shape '(batch, S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
+    """
+
+    # Get class indexes
+    class_indexes = torch.argmax(predictions[..., :num_classes], dim=-1, keepdim=True) # (batch, S, S, 1)
+    class_indexes = class_indexes.type(torch.float32)
+    
+    # Get best confidence one-hot
+    confidences = []
+    for idx in torch.arange(num_boxes):
+        confidence = predictions[..., num_classes+(5*idx):num_classes+(5*idx)+1]
+        confidences.append(confidence)
+    confidences = torch.stack(confidences) # (num_boxes, batch, S, S, 1)
+    best_conf_idx = torch.argmax(confidences, dim=0) # (batch, S, S, 1)
+    best_conf_one_hot = torch.nn.functional.one_hot(best_conf_idx, num_boxes).view(-1, 7, 7, num_boxes) # (batch, S, S, num_boxes)
+
+    # Get prediction box & confidence
+    pred_box = torch.zeros([1, 7, 7, 4])
+    pred_conf = torch.zeros([1, 7, 7, 1])
+    for idx in torch.arange(num_boxes):
+        pred_box += best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(1+(5*idx)):num_classes+(1+(5*idx))+4]
+        pred_conf += best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(5*idx):num_classes+(5*idx)+1]
+
+    # Get cell indexes array
+    base_arr = torch.arange(7).reshape((1, -1)).repeat(7, 1)
+    x_cell_indexes = torch.unsqueeze(base_arr, dim=-1)  # (S, S, 1)
+
+    y_cell_indexes = np.transpose(base_arr)
+    y_cell_indexes = torch.unsqueeze(y_cell_indexes, dim=-1)  # (S, S, 1)
+
+    # Convert x, y ratios to YOLO ratios
+    x = 1 / 7 * (pred_box[..., :1] + x_cell_indexes) # (batch, S, S, 1)
+    y = 1 / 7 * (pred_box[..., 1:2] + y_cell_indexes) # (batch, S, S, 1)
+
+    pred_box = torch.cat([x, y, pred_box[..., 2:4]], dim=-1) # (batch, S, S, 4)
+
+    # Concatenate result
+    pred_result = torch.cat([class_indexes, pred_conf, pred_box], dim=-1) # (batch, S, S, 6)
+
+    # Get all bboxes
+    pred_result = pred_result.view(-1, 7*7, 6) # (batch, S*S, 6)
     
     return pred_result
 
@@ -263,8 +397,6 @@ def get_tagged_img(img, boxes, names_path):
 
 
 if __name__ == '__main__':
-    # print(f'{make_divisible(32)}')
-    
     num_classes = 3
     num_boxes = 2
     
@@ -281,8 +413,8 @@ if __name__ == '__main__':
     y_true[:, 6, 6, num_classes] = 1 # confidence1
     y_true[:, 6, 6, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
     
-    y_true = torch.as_tensor(y_true)
-    print(f'{y_true.shape}, {y_true.dtype}')
+    y_true_tensor = torch.as_tensor(y_true)
+    print(f'{y_true_tensor.shape}, {y_true_tensor.dtype}')
     
     y_pred = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
     y_pred[:, 0, 0, :num_classes] = [0.8, 0.5, 0.1] # class
@@ -303,11 +435,38 @@ if __name__ == '__main__':
     y_pred[:, 6, 6, num_classes+5] = 0.2 # confidence2
     y_pred[:, 6, 6, num_classes+6:num_classes+10] = [0.45, 0.45, 0.1, 0.1] # box2
     
-    y_pred = torch.as_tensor(y_pred)
-    print(f'{y_pred.shape}, {y_pred.dtype}')
+    y_pred_tensor = torch.as_tensor(y_pred)
+    print(f'{y_pred_tensor.shape}, {y_pred_tensor.dtype}')
+
+
+    # IoU Test
+    # numpy array
+    y_true_bbox = y_true[:, 0, 0, num_classes+1:num_classes+5]
+    y_pred_bbox = y_pred[:, 0, 0, num_classes+1:num_classes+5]
+    print(y_true_bbox)
+    print(y_pred_bbox)
+    print(intersection_over_union_numpy(y_true_bbox, y_pred_bbox))
+    # torch tensor
+    y_true_bbox = y_true_tensor[:, 0, 0, num_classes+1:num_classes+5]
+    y_pred_bbox = y_pred_tensor[:, 0, 0, num_classes+1:num_classes+5]
+    print(y_true_bbox)
+    print(y_pred_bbox)
+    print(intersection_over_union(y_true_bbox, y_pred_bbox))
     
-    decode_pred = decode_predictions_numpy(y_pred.numpy(), num_classes, num_boxes)
+    
+    # Decode Prediction Test
+    # numpy array
+    decode_pred = decode_predictions_numpy(y_pred, num_classes, num_boxes)
+    print(decode_pred)
+    # torch tensor
+    decode_pred_tensor = decode_predictions(y_pred_tensor, num_classes, num_boxes)
+    print(decode_pred_tensor)
+    
+    
+    # Non Max Suppression Test
+    # numpy array
     bboxes = non_max_suppression_numpy(decode_pred[0])
     print(bboxes)
-    
-    
+    # torch tensor
+    bboxes_tensor = non_max_suppression(decode_pred_tensor[0])
+    print(bboxes_tensor) 

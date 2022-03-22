@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import pytorch_lightning as pl
 
-from dataset.detection.utils import collater, decode_predictions_numpy, non_max_suppression_numpy, get_tagged_img
+from dataset.detection.utils import decode_predictions_numpy, non_max_suppression_numpy, get_tagged_img
 
 
 class YoloV1Dataset(Dataset):

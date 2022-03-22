@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["--cfg", "configs/cls_vgg16.yaml"],
+            "args": ["--cfg", "configs/yolov1.yaml"],
             "console": "integratedTerminal"
         }
     ]
