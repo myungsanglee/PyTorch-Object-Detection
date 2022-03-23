@@ -13,7 +13,7 @@ class YoloV1(nn.Module):
     def __init__(self, backbone, num_classes, num_boxes, in_channels=3):
         super().__init__()
 
-        self.backbone = backbone(in_channels, include_top=False)
+        self.backbone = backbone(in_channels, num_classes, include_top=False)
         self.num_classes = num_classes
         self.num_boxes = num_boxes
         self.yolov1_head = nn.Sequential(

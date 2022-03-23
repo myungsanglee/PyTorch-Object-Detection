@@ -1,6 +1,8 @@
 import time
+from turtle import forward
 
 import torch
+from torch import nn
 import numpy as np
 import cv2
 
@@ -330,12 +332,15 @@ def decode_predictions(predictions, num_classes, num_boxes=2):
     best_conf_one_hot = torch.nn.functional.one_hot(best_conf_idx, num_boxes).view(-1, 7, 7, num_boxes) # (batch, S, S, num_boxes)
 
     # Get prediction box & confidence
-    pred_box = torch.zeros([1, 7, 7, 4])
-    pred_conf = torch.zeros([1, 7, 7, 1])
+    pred_box = []
+    pred_conf = []
     for idx in torch.arange(num_boxes):
-        pred_box += best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(1+(5*idx)):num_classes+(1+(5*idx))+4]
-        pred_conf += best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(5*idx):num_classes+(5*idx)+1]
-
+        pred_box.append(best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(1+(5*idx)):num_classes+(1+(5*idx))+4])
+        pred_conf.append(best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(5*idx):num_classes+(5*idx)+1])
+    pred_box = torch.sum(torch.stack(pred_box), dim=0)
+    pred_conf = torch.sum(torch.stack(pred_conf), dim=0)
+    
+    
     # Get cell indexes array
     base_arr = torch.arange(7).reshape((1, -1)).repeat(7, 1)
     x_cell_indexes = torch.unsqueeze(base_arr, dim=-1)  # (S, S, 1)
@@ -344,8 +349,12 @@ def decode_predictions(predictions, num_classes, num_boxes=2):
     y_cell_indexes = torch.unsqueeze(y_cell_indexes, dim=-1)  # (S, S, 1)
 
     # Convert x, y ratios to YOLO ratios
-    x = 1 / 7 * (pred_box[..., :1] + x_cell_indexes) # (batch, S, S, 1)
-    y = 1 / 7 * (pred_box[..., 1:2] + y_cell_indexes) # (batch, S, S, 1)
+    if pred_box.is_cuda:
+        x_cell_indexes = x_cell_indexes.cuda()
+        y_cell_indexes = y_cell_indexes.cuda()        
+ 
+    x = torch.mul(torch.add(pred_box[..., :1], x_cell_indexes), torch.div(1, 7)) # (batch, S, S, 1)
+    y = torch.mul(torch.add(pred_box[..., 1:2], y_cell_indexes), torch.div(1, 7))
 
     pred_box = torch.cat([x, y, pred_box[..., 2:4]], dim=-1) # (batch, S, S, 4)
 
@@ -358,14 +367,15 @@ def decode_predictions(predictions, num_classes, num_boxes=2):
     return pred_result
 
 
-def get_tagged_img(img, boxes, names_path):
+def get_tagged_img(img, boxes, names_path, color):
     """tagging result on img
 
     Arguments:
         img (Numpy Array): Image array
         boxes (Tensor): boxes after performing NMS (None, 6)
         names_path (String): path of label names file
-
+        color (tuple): boxes color
+        
     Returns:
         Numpy Array: tagged image array
     """
@@ -387,13 +397,132 @@ def get_tagged_img(img, boxes, names_path):
         xmax = int((x + (w / 2)) * width)
         ymax = int((y + (h / 2)) * height)
 
-        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=(0, 255, 0))
+        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color)
         img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
                           fontFace=cv2.FONT_HERSHEY_PLAIN,
                           fontScale=1,
-                          color=(0, 255, 0))
+                          color=color)
 
     return img
+
+
+class DecodeYoloV1(nn.Module):
+    '''Decode Yolo V1 Predictions to bunding boxes
+    '''
+    
+    def __init__(self, num_classes, num_boxes):
+        super().__init__()
+        self.num_classes = num_classes
+        self.num_boxes = num_boxes
+        
+    def forward(self, x):
+        decode_pred = self.decode_predictions(x, self.num_classes, self.num_boxes)
+        boxes = self.non_max_suppression(decode_pred[0])
+        return boxes
+    
+    def decode_predictions(self, predictions, num_classes, num_boxes):
+        """decodes predictions of the YOLO v1 model
+        
+        Converts bounding boxes output from Yolo with
+        an image split size of GRID into entire image ratios
+        rather than relative to cell ratios.
+
+        Arguments:
+            predictions (Tensor): predictions of the YOLO v1 model with shape  '(1, 7, 7, (num_boxes*5 + num_classes))'
+            num_classes: Number of classes in the dataset
+            num_boxes: Number of boxes to predict
+
+        Returns:
+            Tensor: boxes after decoding predictions each grid cell with shape '(batch, S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
+        """
+
+        # Get class indexes
+        class_indexes = torch.argmax(predictions[..., :num_classes], dim=-1, keepdim=True) # (batch, S, S, 1)
+        class_indexes = class_indexes.type(torch.float32)
+        
+        # Get best confidence one-hot
+        confidences = []
+        for idx in torch.arange(num_boxes):
+            confidence = predictions[..., num_classes+(5*idx):num_classes+(5*idx)+1]
+            confidences.append(confidence)
+        confidences = torch.stack(confidences) # (num_boxes, batch, S, S, 1)
+        best_conf_idx = torch.argmax(confidences, dim=0) # (batch, S, S, 1)
+        best_conf_one_hot = torch.nn.functional.one_hot(best_conf_idx, num_boxes).view(-1, 7, 7, num_boxes) # (batch, S, S, num_boxes)
+
+        # Get prediction box & confidence
+        pred_box = []
+        pred_conf = []
+        for idx in torch.arange(num_boxes):
+            pred_box.append(best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(1+(5*idx)):num_classes+(1+(5*idx))+4])
+            pred_conf.append(best_conf_one_hot[..., idx:idx+1] * predictions[..., num_classes+(5*idx):num_classes+(5*idx)+1])
+        pred_box = torch.sum(torch.stack(pred_box), dim=0)
+        pred_conf = torch.sum(torch.stack(pred_conf), dim=0)
+        
+        
+        # Get cell indexes array
+        base_arr = torch.arange(7).reshape((1, -1)).repeat(7, 1)
+        x_cell_indexes = torch.unsqueeze(base_arr, dim=-1)  # (S, S, 1)
+
+        y_cell_indexes = np.transpose(base_arr)
+        y_cell_indexes = torch.unsqueeze(y_cell_indexes, dim=-1)  # (S, S, 1)
+
+        # Convert x, y ratios to YOLO ratios
+        if pred_box.is_cuda:
+            x_cell_indexes = x_cell_indexes.cuda()
+            y_cell_indexes = y_cell_indexes.cuda()        
+ 
+        x = torch.mul(torch.add(pred_box[..., :1], x_cell_indexes), torch.div(1, 7)) # (batch, S, S, 1)
+        y = torch.mul(torch.add(pred_box[..., 1:2], y_cell_indexes), torch.div(1, 7))
+        
+        pred_box = torch.cat([x, y, pred_box[..., 2:4]], dim=-1) # (batch, S, S, 4)
+
+        # Concatenate result
+        pred_result = torch.cat([class_indexes, pred_conf, pred_box], dim=-1) # (batch, S, S, 6)
+
+        # Get all bboxes
+        pred_result = pred_result.view(-1, 7*7, 6) # (batch, S*S, 6)
+        
+        return pred_result
+
+    def non_max_suppression(self, boxes, iou_threshold=0.5, conf_threshold=0.4):
+        """Does Non Max Suppression given boxes
+
+        Arguments:
+            boxes (Tensor): All boxes with each grid '(S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
+            iou_threshold (float): threshold where predicted boxes is correct
+            conf_threshold (float): threshold to remove predicted boxes
+
+        Returns:
+            Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
+        """
+
+        # boxes smaller than the conf_threshold are removed
+        boxes = boxes[torch.where(boxes[..., 1] > conf_threshold)[0]]
+
+        # sort descending by confidence score
+        boxes = boxes[torch.argsort(-boxes[..., 1])]
+
+        # get boxes after nms
+        boxes_after_nms = []
+
+        while True:
+            chosen_box = boxes[:1, ...]
+            boxes_after_nms.append(chosen_box[0])
+            
+            tmp_boxes = []
+            for idx in range(1, boxes.shape[0]):
+                tmp_box = boxes[idx:idx+1, ...]
+                if tmp_box[0][0] != chosen_box[0][0]:
+                    tmp_boxes.append(tmp_box[0])
+                elif torch.lt(intersection_over_union(chosen_box[..., 2:], tmp_box[..., 2:]), iou_threshold):
+                    tmp_boxes.append(tmp_box[0])
+                    
+            if tmp_boxes:
+                boxes = torch.stack(tmp_boxes)
+            else:
+                break
+
+        return torch.stack(boxes_after_nms)
 
 
 if __name__ == '__main__':

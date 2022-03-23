@@ -1,4 +1,4 @@
-model : 'Yolo_v1'
+model : 'yolov1'
 backbone: 'darknet19'
 dataset_name : 'test'
 num_classes : 3
@@ -6,18 +6,18 @@ num_boxes : 2
 in_channels: 3
 input_size: 448
 
-epochs: 1
+epochs: 100000
 
 train_list : './data/train.txt'
 val_list : ''
-batch_size: 32
+workers: 1 # number of workers to generate data
+batch_size: 1
 
 save_dir : './saved' # dir for saving log, weights
 save_freq: 5
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
 devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
-workers: 1 # number of workers to generate data
 
 optimizer: 'sgd'
 optimizer_options:

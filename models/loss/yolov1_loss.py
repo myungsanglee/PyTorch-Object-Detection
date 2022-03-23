@@ -52,13 +52,16 @@ class YoloV1Loss(nn.Module):
         best_iou_one_hot = torch.nn.functional.one_hot(best_iou_idx, self.num_boxes).view(-1, 7, 7, self.num_boxes) # (batch, 7, 7, num_boxes)
         
         # Get prediction box & iou
-        pred_box = torch.zeros((self.batch_size, 7, 7, 4))
-        pred_conf = torch.zeros((self.batch_size, 7, 7, 1))
-        pred_iou = torch.zeros((self.batch_size, 7, 7, 1))
+        pred_box = []
+        pred_conf = []
+        pred_iou = []
         for idx in torch.arange(self.num_boxes):
-            pred_box += best_iou_one_hot[..., idx:idx+1] * y_pred[..., self.num_classes+(1+(5*idx)):self.num_classes+(1+(5*idx))+4]
-            pred_conf += best_iou_one_hot[..., idx:idx+1] * y_pred[..., self.num_classes+(5*idx):self.num_classes+(5*idx)+1]
-            pred_iou += best_iou_one_hot[..., idx:idx+1] * ious[idx]
+            pred_box.append(best_iou_one_hot[..., idx:idx+1] * y_pred[..., self.num_classes+(1+(5*idx)):self.num_classes+(1+(5*idx))+4])
+            pred_conf.append(best_iou_one_hot[..., idx:idx+1] * y_pred[..., self.num_classes+(5*idx):self.num_classes+(5*idx)+1])
+            pred_iou.append(best_iou_one_hot[..., idx:idx+1] * ious[idx])
+        pred_box = torch.sum(torch.stack(pred_box), dim=0)
+        pred_conf = torch.sum(torch.stack(pred_conf), dim=0)
+        pred_iou = torch.sum(torch.stack(pred_iou), dim=0)
         
         # Get true box
         true_box = y_true[..., self.num_classes+1:self.num_classes+5] # (batch, S, S, 4)

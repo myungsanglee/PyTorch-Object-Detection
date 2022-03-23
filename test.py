@@ -1,6 +1,12 @@
 import torch
 
-a = torch.arange(1*2*3).view(1, 2, 3)
+a = torch.ones((2, 2, 1))
+b = torch.randn((1, 2, 2, 1))
+
 print(a)
-b = torch.sum(a)
 print(b)
+print(a + b)
+print(torch.add(b, a))
+
+print(1/7)  
+print(torch.div(1, 7))

@@ -84,20 +84,35 @@ class YoloV1DataModule(pl.LightningDataModule):
         self.num_boxes = num_boxes
 
     def train_dataloader(self):
-        return DataLoader(YoloV1Dataset(self.train_transforms, self.train_list, self.num_classes, self.num_boxes),
-                          batch_size=self.batch_size,
-                          shuffle=True,
-                          num_workers=self.workers,
-                          persistent_workers=self.workers > 0,
-                          pin_memory=self.workers > 0)
+        return DataLoader(
+            YoloV1Dataset(
+                self.train_transforms, 
+                self.train_list, 
+                self.num_classes, 
+                self.num_boxes
+            ),
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.workers,
+            persistent_workers=self.workers > 0,
+            pin_memory=self.workers > 0
+        )
 
     def val_dataloader(self):
-        return DataLoader(YoloV1Dataset(self.val_transforms, self.val_list, self.num_classes, self.num_boxes),
-                          batch_size=self.batch_size,
-                          shuffle=False,
-                          num_workers=self.workers,
-                          persistent_workers=self.workers > 0,
-                          pin_memory=self.workers > 0)
+        if self.val_list is not '':
+            return DataLoader(
+                YoloV1Dataset(
+                    self.val_transforms, 
+                    self.val_list, 
+                    self.num_classes, 
+                    self.num_boxes
+                ),
+                batch_size=self.batch_size,
+                shuffle=False,
+                num_workers=self.workers,
+                persistent_workers=self.workers > 0,
+                pin_memory=self.workers > 0
+            )
 
 
 if __name__ == '__main__':
