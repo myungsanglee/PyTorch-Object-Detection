@@ -11,6 +11,7 @@ from torch import nn
 
 from models.loss.yolov1_loss import YoloV1Loss
 
+
 class YoloV1Detector(pl.LightningModule):
     def __init__(self, model, cfg, epoch_length=None):
         super().__init__()
@@ -45,13 +46,13 @@ class YoloV1Detector(pl.LightningModule):
             **cfg['optimizer_options']
         )
 
-        scheduler = CosineAnnealingWarmUpRestarts(
-            optim,
-            epoch_length*4,
-            T_mult=2,
-            eta_max=cfg['optimizer_options']['lr'],
-            T_up=epoch_length,
-            gamma=0.96)
+        # scheduler = CosineAnnealingWarmUpRestarts(
+        #     optim,
+        #     epoch_length*4,
+        #     T_mult=2,
+        #     eta_max=cfg['optimizer_options']['lr'],
+        #     T_up=epoch_length,
+        #     gamma=0.96)
 
         # return torch.optim.SGD(self.model.parameters(), lr=0.001,
         #                        momentum=0.9, weight_decay=5e-4, nesterov=True)

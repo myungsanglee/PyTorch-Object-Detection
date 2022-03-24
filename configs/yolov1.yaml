@@ -3,10 +3,9 @@ backbone: 'darknet19'
 dataset_name : 'test'
 num_classes : 3
 num_boxes : 2
-in_channels: 3
 input_size: 448
 
-epochs: 100000
+epochs: 500
 
 train_list : './data/train.txt'
 val_list : ''
@@ -19,12 +18,16 @@ save_freq: 5
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
 devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
-optimizer: 'sgd'
+optimizer: 'adam'
 optimizer_options:
-  lr: 3e-3
-  nesterov: true
-  momentum: 0.9
-  weight_decay: 1e-5
+  lr: 1e-3
+
+# optimizer: 'sgd'
+# optimizer_options:
+#   lr: 3e-3
+#   nesterov: true
+#   momentum: 0.9
+#   weight_decay: 1e-5
 
 trainer_options:
   check_val_every_n_epoch: 5

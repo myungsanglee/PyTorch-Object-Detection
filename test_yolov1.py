@@ -11,6 +11,8 @@ from sklearn.utils import shuffle
 # from pytorch_lightning.loggers import TensorBoardLogger
 # from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
 import torch
+from torch import nn
+import torchvision.models as models
 from torch.utils.data import DataLoader
 import numpy as np
 import cv2
@@ -22,6 +24,13 @@ from models.detector.yolov1 import YoloV1
 from dataset.detection.utils import decode_predictions, non_max_suppression, get_tagged_img, DecodeYoloV1
 from dataset.detection.yolo_dataset import YoloV1Dataset
 
+
+def set_parameter_requires_grad(model, feature_extracting):
+    if feature_extracting:
+        for param in model.parameters():
+            param.requires_grad = False
+            
+            
 def test(cfg):
     # Prepare data
     input_size = cfg['input_size']
@@ -44,22 +53,26 @@ def test(cfg):
     )
 
     # Load trained model
-    backbone = get_model(cfg['backbone'])
-
+    # backbone = get_model(cfg['backbone'])
+    backbone = models.vgg16(pretrained=True)
+    backbone = nn.Sequential(*list(backbone.features.children()))
+    set_parameter_requires_grad(backbone, True)
+    
     model = YoloV1(
         backbone=backbone,
+        backbone_out_features=512,
         num_classes=cfg['num_classes'],
-        num_boxes=cfg['num_boxes'],
-        in_channels=cfg['in_channels']
+        num_boxes=cfg['num_boxes']
     )
     
     if torch.cuda.is_available:
         model = model.to('cuda')
 
     model_module = YoloV1Detector.load_from_checkpoint(
-        checkpoint_path='./saved/yolov1_test/version_0/checkpoints/last.ckpt',
+        checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=475-step=475.ckpt',
         model=model
     )
+    model_module.eval()
 
     yolov1_decoder = DecodeYoloV1(cfg['num_classes'], cfg['num_boxes'])
 
@@ -72,7 +85,8 @@ def test(cfg):
             batch_x = batch_x.cuda()
         
         # before = time.time()
-        predictions = model_module(batch_x)
+        with torch.no_grad():
+            predictions = model_module(batch_x)
         # print(f'Inference: {(time.time()-before)*1000}ms')
         
         # batch_x to img
