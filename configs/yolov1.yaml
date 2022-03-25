@@ -8,7 +8,7 @@ input_size: 448
 epochs: 500
 
 train_list : './data/train.txt'
-val_list : ''
+val_list : './data/train.txt'
 workers: 1 # number of workers to generate data
 batch_size: 1
 
@@ -21,6 +21,12 @@ devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 optimizer: 'adam'
 optimizer_options:
   lr: 1e-3
+  weight_decay: 1e-5
+
+# optimizer: 'radam'
+# optimizer_options:
+#   lr: 1e-3
+#   weight_decay: 1e-5
 
 # optimizer: 'sgd'
 # optimizer_options:

@@ -52,8 +52,13 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 if __name__ == '__main__':
     backbone = models.vgg16(pretrained=True)
+    tmp = list(backbone.features.children())
     backbone = nn.Sequential(*list(backbone.features.children()))
     set_parameter_requires_grad(backbone, True)
+
+    print(tmp[-1])
+        
+    print(backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).shape)
 
     model = YoloV1(
         backbone=backbone,
@@ -63,14 +68,3 @@ if __name__ == '__main__':
     )
 
     torchsummary.summary(model, (3, 448, 448), batch_size=1, device='cpu')
-    
-    # print(backbone.fc.in_features)
-    # model = YoloV1(
-    #     backbone=darknet19,
-    #     num_classes=20,
-    #     num_boxes=2
-    # )
-    # print(model(torch.rand(1, 3, 448, 448)).shape)
-    # print(model)
-    # torchsummary.summary(model, (3, 448, 448), batch_size=1, device='cpu')
-    

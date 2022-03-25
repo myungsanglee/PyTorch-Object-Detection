@@ -1,6 +1,5 @@
 import argparse
-
-from utils.utility import make_model_name
+import platform
 
 import albumentations
 import albumentations.pytorch
@@ -8,17 +7,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
-import torchvision.models as models
 from torch import nn
+import torchvision.models as models
 
-from dataset.detection import yolo_format, yolo_dataset
-from utils.module_select import get_cls_subnet, get_fpn, get_model, get_reg_subnet
+from dataset.detection import yolo_dataset
 from utils.yaml_helper import get_train_configs
-
-from module.detector import Detector, YoloV1Detector
+from module.detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
-from models.detector.retinanet import RetinaNet
-import platform
+from utils.utility import make_model_name
 
 
 def add_experimental_callbacks(cfg, train_callbacks):
@@ -38,7 +34,7 @@ def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():
             param.requires_grad = False
-            
+
 
 def train(cfg):
     input_size = cfg['input_size']
@@ -75,7 +71,7 @@ def train(cfg):
     
     model = YoloV1(
         backbone=backbone,
-        backbone_out_features=512,
+        backbone_out_channels=512,
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
@@ -113,9 +109,7 @@ def train(cfg):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', required=True, type=str,
-                        help='Train config file')
-
+    parser.add_argument('--cfg', required=True, type=str, help='Train config file')
     args = parser.parse_args()
     cfg = get_train_configs(args.cfg)
 

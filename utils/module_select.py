@@ -34,7 +34,11 @@ def get_reg_subnet(subnet_name):
 
 
 def get_optimizer(optimizer_name, params, **kwargs):
-    optim_dict = {'sgd': optim.SGD, 'adam': optim.Adam}
+    optim_dict = {
+        'sgd': optim.SGD, 
+        'adam': optim.Adam,
+        'radam': optim.RAdam
+    }
     optimizer = optim_dict.get(optimizer_name)
     print(f'\n[get_optimizer]\n{kwargs}\n')
     if optimizer:
