@@ -1,9 +1,9 @@
 model : 'yolov1'
 backbone: 'darknet19'
 dataset_name : 'test'
+input_size: 448
 num_classes : 3
 num_boxes : 2
-input_size: 448
 
 epochs: 500
 

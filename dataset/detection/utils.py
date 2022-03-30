@@ -1,5 +1,4 @@
 import time
-from turtle import forward
 
 import torch
 from torch import nn
@@ -38,29 +37,6 @@ def collater(data):
         padded_annots = torch.ones((batch_size, 1, 5)) * -1
 
     return {'img': torch.stack(imgs), 'annot': padded_annots}
-
-
-def visualize(images, bboxes, batch_idx=0):
-    """batch data를 opencv로 visualize
-
-    Args:
-        images ([list]): list of img tensor
-        bboxes ([tensor]): tensor data of annotations
-                        shape == [batch, max_annots, 5(x1,y1,x2,y2,cid)]
-                        max_annots 은 batch sample 중 가장 많은 bbox 갯수.
-                        다른 sample 은 -1 로 패딩된 데이터가 저장됨.
-        batch_idx (int, optional): [description]. Defaults to 0.
-    """
-    img = images[batch_idx].numpy()
-    img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-
-    for b in bboxes[batch_idx]:
-        x1, y1, x2, y2, cid = b.numpy()
-        if cid > -1:
-            img = cv2.rectangle(img, (int(x1), int(y1)),
-                                (int(x2), int(y2)), (0, 255, 0))
-    cv2.imshow('img', img)
-    cv2.waitKey(0)
 
 
 def get_tagged_img(img, boxes, names_path):

@@ -1,15 +1,8 @@
 import argparse
 import time
-# from utils.utility import make_model_name
 
 import albumentations
 import albumentations.pytorch
-from sklearn.utils import shuffle
-# import albumentations.pytorch
-# import pytorch_lightning as pl
-# from pytorch_lightning.plugins import DDPPlugin
-# from pytorch_lightning.loggers import TensorBoardLogger
-# from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
 import torch
 from torch import nn
 import torchvision.models as models
@@ -21,7 +14,7 @@ from utils.module_select import get_model
 from utils.yaml_helper import get_train_configs
 from module.detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
-from dataset.detection.utils import decode_predictions, non_max_suppression, get_tagged_img, DecodeYoloV1
+from dataset.detection.utils import get_tagged_img, DecodeYoloV1
 from dataset.detection.yolo_dataset import YoloV1Dataset
 
 
@@ -60,7 +53,7 @@ def test(cfg):
     
     model = YoloV1(
         backbone=backbone,
-        backbone_out_features=512,
+        backbone_out_channels=512,
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )

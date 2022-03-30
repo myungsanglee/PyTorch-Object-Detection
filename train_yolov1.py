@@ -40,8 +40,13 @@ def train(cfg):
     input_size = cfg['input_size']
     
     train_transforms = albumentations.Compose([
-        albumentations.HorizontalFlip(p=0.5),
-        albumentations.ColorJitter(),
+        albumentations.HorizontalFlip(),
+        albumentations.ColorJitter(
+            brightness=0.5,
+            contrast=0.2,
+            saturation=0.5,
+            hue=0.1    
+        ),
         albumentations.RandomResizedCrop(input_size, input_size, (0.8, 1)),
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),

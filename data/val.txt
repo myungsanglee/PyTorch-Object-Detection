@@ -1,4 +1,1 @@
-C:/my_github/PyTorch-Object-Detection/data/test/000012.jpg
-C:/my_github/PyTorch-Object-Detection/data/test/000017.jpg
-C:/my_github/PyTorch-Object-Detection/data/test/000023.jpg
-C:/my_github/PyTorch-Object-Detection/data/test/000026.jpg
+C:/my_github/PyTorch-Object-Detection/data/test.jpg
