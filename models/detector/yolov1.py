@@ -1,6 +1,4 @@
-from sqlite3 import paramstyle
 import sys
-from turtle import back
 sys.path.append('C:/my_github/PyTorch-Object-Detection')
 
 import torch
@@ -10,7 +8,6 @@ import torchvision.models as models
 
 from models.initialize import weight_initialize
 from models.layers.conv_block import Conv2dBnRelu
-from models.backbone.darknet import darknet19
 
 
 class YoloV1(nn.Module):
@@ -23,11 +20,9 @@ class YoloV1(nn.Module):
         self.yolov1_head = nn.Sequential(
             Conv2dBnRelu(backbone_out_channels, 1024, 3, 2),
             Conv2dBnRelu(1024, 1024, 3, 2),
-            Conv2dBnRelu(1024, 1024, 3, 1),
-            Conv2dBnRelu(1024, 1024, 3, 1),
             nn.Flatten(),
-            nn.Linear(1024*4*4, 512),
-            nn.Linear(512, 1024),
+            nn.Linear(1024*4*4, 1024),
+            nn.Linear(1024, 1024),
             nn.Dropout(0.5),
             nn.Linear(1024, 7*7*(self.num_classes + (5*self.num_boxes)))
         )
@@ -48,12 +43,12 @@ def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():
             param.requires_grad = False
- 
+
 
 if __name__ == '__main__':
     backbone = models.vgg16(pretrained=True)
     backbone = nn.Sequential(*list(backbone.features.children()))
-    set_parameter_requires_grad(backbone, True)
+    set_parameter_requires_grad(backbone, False)
 
     print(backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).shape)
 

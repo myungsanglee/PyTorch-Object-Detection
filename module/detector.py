@@ -1,8 +1,8 @@
 import pytorch_lightning as pl
 
 from utils.module_select import get_optimizer
-from module.lr_scheduler import CosineAnnealingWarmUpRestarts
 from models.loss.yolov1_loss import YoloV1Loss
+# from module.lr_scheduler import CosineAnnealingWarmUpRestarts
 
 
 class YoloV1Detector(pl.LightningModule):
@@ -20,7 +20,7 @@ class YoloV1Detector(pl.LightningModule):
         pred = self.model(batch['image'])
         loss = self.loss_fn(batch['label'], pred)
 
-        self.log('train_loss', loss, prog_bar=True, logger=True, on_epoch=True)
+        self.log('train_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
 
         return loss
 
@@ -28,7 +28,7 @@ class YoloV1Detector(pl.LightningModule):
         pred = self.model(batch['image'])
         loss = self.loss_fn(batch['label'], pred)
 
-        self.log('val_loss', loss, logger=True, on_epoch=True)
+        self.log('val_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
 
     def configure_optimizers(self):
         cfg = self.hparams.cfg

@@ -56,8 +56,7 @@ def train(cfg):
     print(type(cfg['devices']))
     trainer = pl.Trainer(
         max_epochs=cfg['epochs'],
-        logger=TensorBoardLogger(cfg['save_dir'],
-                                 make_model_name(cfg)),
+        logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg), default_hp_metric=False),
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
         # strategy='ddp' if platform.system() != 'Windows' else None,

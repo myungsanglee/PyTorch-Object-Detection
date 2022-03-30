@@ -5,7 +5,7 @@ input_size: 448
 num_classes : 3
 num_boxes : 2
 
-epochs: 500
+epochs: 1000
 
 train_list : './data/train.txt'
 val_list : './data/train.txt'

@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader
 import numpy as np
 import cv2
 
-from utils.module_select import get_model
 from utils.yaml_helper import get_train_configs
 from module.detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
@@ -46,7 +45,6 @@ def test(cfg):
     )
 
     # Load trained model
-    # backbone = get_model(cfg['backbone'])
     backbone = models.vgg16(pretrained=True)
     backbone = nn.Sequential(*list(backbone.features.children()))
     set_parameter_requires_grad(backbone, True)
@@ -62,7 +60,7 @@ def test(cfg):
         model = model.to('cuda')
 
     model_module = YoloV1Detector.load_from_checkpoint(
-        checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=251-step=251.ckpt',
+        checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=919-step=919.ckpt',
         model=model
     )
     model_module.eval()
@@ -71,30 +69,30 @@ def test(cfg):
 
     # Inference
     for sample in data_loader:
-        batch_x = sample['image']
-        batch_y = sample['label']
+        
+        for _ in range(5):
+            batch_x = sample['image']
+            batch_y = sample['label']
 
-        if torch.cuda.is_available:
-            batch_x = batch_x.cuda()
+            if torch.cuda.is_available:
+                batch_x = batch_x.cuda()
+            
+            before = time.time()
+            with torch.no_grad():
+                predictions = model_module(batch_x)
+            boxes = yolov1_decoder(predictions)
+            print(f'Inference: {(time.time()-before)*1000}ms')
+            
+            # batch_x to img
+            if torch.cuda.is_available:
+                img = batch_x.cpu()[0].numpy()   
+            else:
+                img = batch_x[0].numpy()   
+            img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         
-        # before = time.time()
-        with torch.no_grad():
-            predictions = model_module(batch_x)
-        # print(f'Inference: {(time.time()-before)*1000}ms')
+            true_boxes = yolov1_decoder(batch_y)
         
-        # batch_x to img
-        if torch.cuda.is_available:
-            img = batch_x.cpu()[0].numpy()   
-        else:
-            img = batch_x[0].numpy()   
-        img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-        
-        boxes = yolov1_decoder(predictions)
-
         tagged_img = get_tagged_img(img, boxes, './data/test.names', (0, 255, 0))
-        
-        true_boxes = yolov1_decoder(batch_y)
-        
         tagged_img = get_tagged_img(tagged_img, true_boxes, './data/test.names', (0, 0, 255))
 
         cv2.imshow('test', tagged_img)
@@ -105,9 +103,7 @@ def test(cfg):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', required=True, type=str,
-                        help='Train config file')
-
+    parser.add_argument('--cfg', required=True, type=str, help='Train config file')
     args = parser.parse_args()
     cfg = get_train_configs(args.cfg)
 

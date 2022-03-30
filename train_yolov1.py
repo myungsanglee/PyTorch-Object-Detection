@@ -4,7 +4,6 @@ import platform
 import albumentations
 import albumentations.pytorch
 import pytorch_lightning as pl
-from pytorch_lightning.plugins import DDPPlugin
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
 from torch import nn
@@ -62,17 +61,16 @@ def train(cfg):
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 
-        train_transforms=valid_transform, 
+        train_transforms=train_transforms, 
         val_transforms=valid_transform,
         batch_size=cfg['batch_size'],
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
 
-    # backbone = get_model(cfg['backbone'])
     backbone = models.vgg16(pretrained=True)
     backbone = nn.Sequential(*list(backbone.features.children()))
-    set_parameter_requires_grad(backbone, True)
+    set_parameter_requires_grad(backbone, False)
     
     model = YoloV1(
         backbone=backbone,
@@ -81,18 +79,25 @@ def train(cfg):
         num_boxes=cfg['num_boxes']
     )
 
-    model_module = YoloV1Detector(
-        model=model, 
-        cfg=cfg, 
+    # model_module = YoloV1Detector(
+    #     model=model, 
+    #     cfg=cfg, 
+    #     epoch_length=data_module.train_dataloader().__len__()
+    # )
+    
+    model_module = YoloV1Detector.load_from_checkpoint(
+        checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=319-step=319.ckpt',
+        model=model,
+        cfg=cfg,
         epoch_length=data_module.train_dataloader().__len__()
     )
 
     callbacks = [
-        # LearningRateMonitor(logging_interval='step'),
+        LearningRateMonitor(logging_interval='step'),
         ModelCheckpoint(
-            monitor='train_loss', 
-            save_last=True
-            # every_n_epochs=cfg['save_freq']
+            monitor='val_loss', 
+            save_last=True,
+            every_n_epochs=cfg['save_freq']
         )
     ]
 
@@ -100,13 +105,12 @@ def train(cfg):
 
     trainer = pl.Trainer(
         max_epochs=cfg['epochs'],
-        logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg)),
+        logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg), default_hp_metric=False),
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
-        # strategy='ddp' if platform.system() != 'Windows' else None,
-        # plugins=DDPPlugin(find_unused_parameters=False) if platform.system() != 'Windows' else None,
+        strategy='ddp' if platform.system() != 'Windows' else None,
         callbacks=callbacks,
-        # **cfg['trainer_options']
+        **cfg['trainer_options']
     )
     
     trainer.fit(model_module, data_module)

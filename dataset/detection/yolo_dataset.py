@@ -5,6 +5,8 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
 import pytorch_lightning as pl
+import albumentations
+import albumentations.pytorch
 
 from dataset.detection.utils import decode_predictions_numpy, non_max_suppression_numpy, get_tagged_img
 
@@ -99,31 +101,22 @@ class YoloV1DataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
-        if self.val_list is not '':
-            return DataLoader(
-                YoloV1Dataset(
-                    self.val_transforms, 
-                    self.val_list, 
-                    self.num_classes, 
-                    self.num_boxes
-                ),
-                batch_size=self.batch_size,
-                shuffle=False,
-                num_workers=self.workers,
-                persistent_workers=self.workers > 0,
-                pin_memory=self.workers > 0
-            )
+        return DataLoader(
+            YoloV1Dataset(
+                self.val_transforms, 
+                self.val_list, 
+                self.num_classes, 
+                self.num_boxes
+            ),
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.workers,
+            persistent_workers=self.workers > 0,
+            pin_memory=self.workers > 0
+        )
 
 
 if __name__ == '__main__':
-    """
-    Data loader 테스트 코드
-    python -m dataset.detection.yolo_format
-    """
-    import albumentations
-    import albumentations.pytorch
-    from dataset.detection.utils import visualize
-
     train_transforms = albumentations.Compose([
         # albumentations.HorizontalFlip(p=0.5),
         # albumentations.ColorJitter(),
@@ -148,7 +141,7 @@ if __name__ == '__main__':
         label = sample['label'].numpy()
         boxes = non_max_suppression_numpy(decode_predictions_numpy(label, num_classes, num_boxes)[0])
         
-        img = get_tagged_img(img, boxes, './data/test.names')
+        img = get_tagged_img(img, boxes, './data/test.names', (0, 255, 0))
         
         cv2.imshow('test', img)
         key = cv2.waitKey(0)
