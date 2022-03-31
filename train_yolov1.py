@@ -39,14 +39,15 @@ def train(cfg):
     input_size = cfg['input_size']
     
     train_transforms = albumentations.Compose([
-        albumentations.HorizontalFlip(),
-        albumentations.ColorJitter(
-            brightness=0.5,
-            contrast=0.2,
-            saturation=0.5,
-            hue=0.1    
-        ),
-        albumentations.RandomResizedCrop(input_size, input_size, (0.8, 1)),
+        # albumentations.HorizontalFlip(),
+        # albumentations.ColorJitter(
+        #     brightness=0.5,
+        #     contrast=0.2,
+        #     saturation=0.5,
+        #     hue=0.1    
+        # ),
+        # albumentations.RandomResizedCrop(input_size, input_size, (0.8, 1)),
+        albumentations.Resize(input_size, input_size, always_apply=True),
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),
     ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
@@ -68,9 +69,10 @@ def train(cfg):
         num_boxes=cfg['num_boxes']
     )
 
-    backbone = models.vgg16(pretrained=True)
-    backbone = nn.Sequential(*list(backbone.features.children()))
-    set_parameter_requires_grad(backbone, False)
+    vgg16 = models.vgg16(pretrained=True)
+    backbone = vgg16.features
+    # backbone = nn.Sequential(*list(backbone.features.children()))
+    # set_parameter_requires_grad(backbone, True)
     
     model = YoloV1(
         backbone=backbone,
@@ -79,25 +81,25 @@ def train(cfg):
         num_boxes=cfg['num_boxes']
     )
 
-    # model_module = YoloV1Detector(
-    #     model=model, 
-    #     cfg=cfg, 
-    #     epoch_length=data_module.train_dataloader().__len__()
-    # )
-    
-    model_module = YoloV1Detector.load_from_checkpoint(
-        checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=319-step=319.ckpt',
-        model=model,
-        cfg=cfg,
+    model_module = YoloV1Detector(
+        model=model, 
+        cfg=cfg, 
         epoch_length=data_module.train_dataloader().__len__()
     )
+
+    # model_module = YoloV1Detector.load_from_checkpoint(
+    #     checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=319-step=319.ckpt',
+    #     model=model,
+    #     cfg=cfg,
+    #     epoch_length=data_module.train_dataloader().__len__()
+    # )
 
     callbacks = [
         LearningRateMonitor(logging_interval='step'),
         ModelCheckpoint(
             monitor='val_loss', 
             save_last=True,
-            every_n_epochs=cfg['save_freq']
+            # every_n_epochs=cfg['save_freq']
         )
     ]
 
@@ -110,7 +112,7 @@ def train(cfg):
         devices=cfg['devices'],
         strategy='ddp' if platform.system() != 'Windows' else None,
         callbacks=callbacks,
-        **cfg['trainer_options']
+        # **cfg['trainer_options']
     )
     
     trainer.fit(model_module, data_module)

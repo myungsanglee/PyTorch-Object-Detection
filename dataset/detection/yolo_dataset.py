@@ -118,9 +118,15 @@ class YoloV1DataModule(pl.LightningDataModule):
 
 if __name__ == '__main__':
     train_transforms = albumentations.Compose([
-        # albumentations.HorizontalFlip(p=0.5),
-        # albumentations.ColorJitter(),
-        albumentations.RandomResizedCrop(448, 448, (0.8, 1)),
+        # albumentations.HorizontalFlip(),
+        # albumentations.ColorJitter(
+        #     brightness=0.5,
+        #     contrast=0.2,
+        #     saturation=0.5,
+        #     hue=0.1    
+        # ),
+        # albumentations.RandomResizedCrop(448, 448, (0.8, 1)),
+        albumentations.Resize(448, 448, always_apply=True),
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),
     ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
@@ -131,21 +137,27 @@ if __name__ == '__main__':
                         batch_size=1, 
                         shuffle=False)
 
-    for batch, sample in enumerate(loader):
-        print(sample['image'].shape)
-        print(sample['label'].shape)
+    flag = False
+    while True:
+        for batch, sample in enumerate(loader):
+            print(sample['image'].shape)
+            print(sample['label'].shape)
+            
+            img = sample['image'][0].numpy()   
+            img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
+            
+            label = sample['label'].numpy()
+            boxes = non_max_suppression_numpy(decode_predictions_numpy(label, num_classes, num_boxes)[0])
+            
+            img = get_tagged_img(img, boxes, './data/test.names', (0, 255, 0))
+            
+            cv2.imshow('test', img)
+            key = cv2.waitKey(0)
+            if key == 27:
+                flag = True
+                break
         
-        img = sample['image'][0].numpy()   
-        img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-        
-        label = sample['label'].numpy()
-        boxes = non_max_suppression_numpy(decode_predictions_numpy(label, num_classes, num_boxes)[0])
-        
-        img = get_tagged_img(img, boxes, './data/test.names', (0, 255, 0))
-        
-        cv2.imshow('test', img)
-        key = cv2.waitKey(0)
-        if key == 27:
+        if flag:
             break
-    
+        
     cv2.destroyAllWindows()

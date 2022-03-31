@@ -45,9 +45,8 @@ def test(cfg):
     )
 
     # Load trained model
-    backbone = models.vgg16(pretrained=True)
-    backbone = nn.Sequential(*list(backbone.features.children()))
-    set_parameter_requires_grad(backbone, True)
+    vgg16 = models.vgg16(pretrained=True)
+    backbone = vgg16.features
     
     model = YoloV1(
         backbone=backbone,
@@ -60,8 +59,10 @@ def test(cfg):
         model = model.to('cuda')
 
     model_module = YoloV1Detector.load_from_checkpoint(
-        checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=919-step=919.ckpt',
-        model=model
+        checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=558-step=558.ckpt',
+        # checkpoint_path='./saved/yolov1_test/version_0/checkpoints/last.ckpt',
+        model=model,
+        cfg=cfg
     )
     model_module.eval()
 

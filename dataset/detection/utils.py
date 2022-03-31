@@ -480,26 +480,29 @@ class DecodeYoloV1(nn.Module):
 
         # get boxes after nms
         boxes_after_nms = []
+        
+        if boxes.size()[0]:
+            while True:
+                chosen_box = boxes[:1, ...]
+                boxes_after_nms.append(chosen_box[0])
+                
+                tmp_boxes = []
+                for idx in range(1, boxes.shape[0]):
+                    tmp_box = boxes[idx:idx+1, ...]
+                    if tmp_box[0][0] != chosen_box[0][0]:
+                        tmp_boxes.append(tmp_box[0])
+                    elif torch.lt(intersection_over_union(chosen_box[..., 2:], tmp_box[..., 2:]), iou_threshold):
+                        tmp_boxes.append(tmp_box[0])
+                        
+                if tmp_boxes:
+                    boxes = torch.stack(tmp_boxes)
+                else:
+                    break
 
-        while True:
-            chosen_box = boxes[:1, ...]
-            boxes_after_nms.append(chosen_box[0])
-            
-            tmp_boxes = []
-            for idx in range(1, boxes.shape[0]):
-                tmp_box = boxes[idx:idx+1, ...]
-                if tmp_box[0][0] != chosen_box[0][0]:
-                    tmp_boxes.append(tmp_box[0])
-                elif torch.lt(intersection_over_union(chosen_box[..., 2:], tmp_box[..., 2:]), iou_threshold):
-                    tmp_boxes.append(tmp_box[0])
-                    
-            if tmp_boxes:
-                boxes = torch.stack(tmp_boxes)
-            else:
-                break
+            return torch.stack(boxes_after_nms)
 
-        return torch.stack(boxes_after_nms)
-
+        else:
+            return boxes
 
 if __name__ == '__main__':
     num_classes = 3

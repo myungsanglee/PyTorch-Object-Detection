@@ -18,14 +18,27 @@ class YoloV1(nn.Module):
         self.num_classes = num_classes
         self.num_boxes = num_boxes
         self.yolov1_head = nn.Sequential(
-            Conv2dBnRelu(backbone_out_channels, 1024, 3, 2),
-            Conv2dBnRelu(1024, 1024, 3, 2),
-            nn.Flatten(),
-            nn.Linear(1024*4*4, 1024),
-            nn.Linear(1024, 1024),
-            nn.Dropout(0.5),
-            nn.Linear(1024, 7*7*(self.num_classes + (5*self.num_boxes)))
+            nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
+            nn.BatchNorm2d(1024),
+            nn.ReLU(),
+            # Conv2dBnRelu(backbone_out_channels, 1024, 3, 2),
+            nn.Conv2d(1024, (self.num_classes + (5*self.num_boxes)), 1)
+            # Conv2dBnRelu(1024, 1024, 3, 2),
+            # nn.Flatten(),
+            # nn.Linear(1024*4*4, 1024),
+            # nn.Linear(1024, 1024),
+            # nn.Dropout(0.5),
+            # nn.Linear(1024, 7*7*(self.num_classes + (5*self.num_boxes)))
         )
+        # self.yolov1_head = nn.Sequential(
+        #     Conv2dBnRelu(backbone_out_channels, 1024, 3, 2),
+        #     Conv2dBnRelu(1024, 1024, 3, 2),
+        #     nn.Flatten(),
+        #     nn.Linear(1024*4*4, 1024),
+        #     nn.Linear(1024, 1024),
+        #     nn.Dropout(0.5),
+        #     nn.Linear(1024, 7*7*(self.num_classes + (5*self.num_boxes)))
+        # )
         
         weight_initialize(self.yolov1_head)
 
@@ -46,9 +59,12 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 if __name__ == '__main__':
-    backbone = models.vgg16(pretrained=True)
-    backbone = nn.Sequential(*list(backbone.features.children()))
-    set_parameter_requires_grad(backbone, False)
+    vgg16 = models.vgg16(pretrained=True)
+
+    # backbone = nn.Sequential(*list(backbone.features.children()))
+    backbone = vgg16.features
+    torchsummary.summary(backbone, (3, 448, 448), batch_size=1, device='cpu')
+    set_parameter_requires_grad(backbone, True)
 
     print(backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).shape)
 
