@@ -30,7 +30,7 @@ optimizer_options:
 
 # optimizer: 'sgd'
 # optimizer_options:
-#   lr: 3e-3
+#   lr: 1e-3
 #   nesterov: true
 #   momentum: 0.9
 #   weight_decay: 1e-5

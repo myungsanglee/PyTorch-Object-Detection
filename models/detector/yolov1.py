@@ -2,7 +2,7 @@ import sys
 sys.path.append('C:/my_github/PyTorch-Object-Detection')
 
 import torch
-from torch import nn
+from torch import nn, sigmoid
 import torchsummary
 import torchvision.models as models
 
@@ -17,28 +17,33 @@ class YoloV1(nn.Module):
         self.backbone = backbone
         self.num_classes = num_classes
         self.num_boxes = num_boxes
+        
+        # version_0
+        # self.yolov1_head = nn.Sequential(
+        #     nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
+        #     nn.BatchNorm2d(1024),
+        #     nn.ReLU(),
+            
+        #     nn.Conv2d(1024, (self.num_classes + (5*self.num_boxes)), 1)
+        # )
+        
+        # version_1
         self.yolov1_head = nn.Sequential(
             nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
             nn.BatchNorm2d(1024),
             nn.ReLU(),
-            # Conv2dBnRelu(backbone_out_channels, 1024, 3, 2),
-            nn.Conv2d(1024, (self.num_classes + (5*self.num_boxes)), 1)
-            # Conv2dBnRelu(1024, 1024, 3, 2),
-            # nn.Flatten(),
-            # nn.Linear(1024*4*4, 1024),
-            # nn.Linear(1024, 1024),
-            # nn.Dropout(0.5),
-            # nn.Linear(1024, 7*7*(self.num_classes + (5*self.num_boxes)))
+            
+            nn.Conv2d(1024, 1024, 3, 2, 1),
+            nn.BatchNorm2d(1024),
+            nn.ReLU(),
+            
+            nn.Flatten(),
+            
+            nn.Linear(1024*4*4, 2048),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(2048, 7*7*(self.num_classes + (5*self.num_boxes)))
         )
-        # self.yolov1_head = nn.Sequential(
-        #     Conv2dBnRelu(backbone_out_channels, 1024, 3, 2),
-        #     Conv2dBnRelu(1024, 1024, 3, 2),
-        #     nn.Flatten(),
-        #     nn.Linear(1024*4*4, 1024),
-        #     nn.Linear(1024, 1024),
-        #     nn.Dropout(0.5),
-        #     nn.Linear(1024, 7*7*(self.num_classes + (5*self.num_boxes)))
-        # )
         
         weight_initialize(self.yolov1_head)
 
