@@ -24,11 +24,20 @@ class YoloV1Detector(pl.LightningModule):
 
         return loss
 
+    # def on_validation_epoch_start(self):
+    #     self.mAP.reset_accumulators()
+
     def validation_step(self, batch, batch_idx):
         pred = self.model(batch['image'])
         loss = self.loss_fn(batch['label'], pred)
 
         self.log('val_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
+        
+    # def on_validation_epoch_end(self) -> None:
+    #     ap_per_class, mAP = self.mAP.compute_map()
+    #     self.log('val_mAP', mAP, on_epoch=True, prog_bar=True, sync_dist=True)
+    #     for k, v in ap_per_class.items():
+    #         self.log(f'val_AP_{k}', v, on_epoch=True, sync_dist=True)
 
     def configure_optimizers(self):
         cfg = self.hparams.cfg
@@ -45,15 +54,15 @@ class YoloV1Detector(pl.LightningModule):
         #     T_mult=2,
         #     eta_max=cfg['optimizer_options']['lr'],
         #     T_up=epoch_length,
-        #     gamma=0.96)
+        #     gamma=0.96
+        # )
 
-        # return torch.optim.SGD(self.model.parameters(), lr=0.001,
-        #                        momentum=0.9, weight_decay=5e-4, nesterov=True)
-
-        # return {"optimizer": optim,
-        # "lr_scheduler": {
-        # "scheduler": scheduler,
-        # 'interval': 'step'}
+        # return {
+        #     "optimizer": optim,
+        #     "lr_scheduler": {
+        #         "scheduler": scheduler,
+        #         'interval': 'step'
+        #     }
         # }
         
         return optim
