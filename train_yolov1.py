@@ -39,15 +39,15 @@ def train(cfg):
     input_size = cfg['input_size']
     
     train_transforms = albumentations.Compose([
-        # albumentations.HorizontalFlip(),
-        # albumentations.ColorJitter(
-        #     brightness=0.5,
-        #     contrast=0.2,
-        #     saturation=0.5,
-        #     hue=0.1    
-        # ),
-        # albumentations.RandomResizedCrop(input_size, input_size, (0.8, 1)),
-        albumentations.Resize(input_size, input_size, always_apply=True),
+        albumentations.HorizontalFlip(),
+        albumentations.ColorJitter(
+            brightness=0.5,
+            contrast=0.2,
+            saturation=0.5,
+            hue=0.1    
+        ),
+        albumentations.RandomResizedCrop(input_size, input_size, (0.8, 1)),
+        # albumentations.Resize(input_size, input_size, always_apply=True),
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),
     ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
@@ -99,7 +99,7 @@ def train(cfg):
         ModelCheckpoint(
             monitor='val_loss', 
             save_last=True,
-            # every_n_epochs=cfg['save_freq']
+            every_n_epochs=cfg['save_freq']
         )
     ]
 
@@ -112,7 +112,7 @@ def train(cfg):
         devices=cfg['devices'],
         strategy='ddp' if platform.system() != 'Windows' else None,
         callbacks=callbacks,
-        # **cfg['trainer_options']
+        **cfg['trainer_options']
     )
     
     trainer.fit(model_module, data_module)
