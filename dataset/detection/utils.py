@@ -199,6 +199,9 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.4):
     # get boxes after nms
     boxes_after_nms = []
 
+    if boxes.size()[0] == 0:
+        return boxes
+
     while True:
         chosen_box = boxes[:1, ...]
         boxes_after_nms.append(chosen_box[0])

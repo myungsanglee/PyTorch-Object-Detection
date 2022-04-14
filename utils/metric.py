@@ -1,7 +1,12 @@
+import sys
+sys.path.append('C:/my_github/PyTorch-Object-Detection')
+
+from collections import Counter
+
 import torch
 import numpy as np
 
-from dataset.detection.utils import non_max_suppression, decode_predictions
+from dataset.detection.utils import non_max_suppression, decode_predictions, intersection_over_union
 
 
 class MeanAveragePrecision:
@@ -21,11 +26,11 @@ class MeanAveragePrecision:
 
         for idx in torch.arange(y_true.size()[0]):
             pred_nms = non_max_suppression(pred_boxes[idx], iou_threshold=0.5, conf_threshold=0.4)
-            pred_img_idx = torch.zeros([pred_nms.size()[0], 1], torch.float32) + self.img_idx
+            pred_img_idx = torch.zeros([pred_nms.size()[0], 1], dtype=torch.float32) + self.img_idx
             pred_concat = torch.concat([pred_img_idx, pred_nms], dim=1)
 
             true_nms = non_max_suppression(true_boxes[idx], iou_threshold=0.5, conf_threshold=0.4)
-            true_img_idx = torch.zeros([true_nms.size()[0], 1], torch.float32) + self.img_idx
+            true_img_idx = torch.zeros([true_nms.size()[0], 1], dtype=torch.float32) + self.img_idx
             true_concat = torch.concat([true_img_idx, true_nms], dim=1)
 
             if self.img_idx == 0.:
@@ -61,134 +66,129 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
     epsilon = 1e-6
 
     for c in torch.arange(num_classes, dtype=torch.float32):
-        print('Calculating AP: ', c, ' / ', num_classes)
+        print('Calculating AP: ', int(c), ' / ', num_classes)
 
         # detections, ground_truths variables in specific class
         detections = pred_boxes[torch.where(pred_boxes[..., 1] == c)[0]]
         ground_truths = true_boxes[torch.where(true_boxes[..., 1] == c)[0]]
 
         # If none exists for this class then we can safely skip
-        total_true_boxes = torch.tensor(ground_truths.size()[0], dtype=torch.float32)
-        if total_true_boxes == 0.:
-            average_precisions = average_precisions.append(torch.tensor(0, dtype=torch.float32))
+        total_true_boxes = len(ground_truths)
+        if total_true_boxes == 0:
+            average_precisions.append(torch.tensor(0))
             continue
 
-        # tf.print(c, ' class ground truths size: ', tf.shape(ground_truths)[0])
-        # tf.print(c, ' class detections size: ', tf.shape(detections)[0])
+        # print(c, ' class ground truths size: ', ground_truths.size()[0])
+        # print(c, ' class detections size: ', detections.size()[0])
 
-        # Get the number of true boxes by image index
-        img_idx, idx, count = tf.unique_with_counts(ground_truths[..., 0])
-        img_idx = tf.cast(img_idx, dtype=tf.int32)
+        # find the amount of bboxes for each training example
+        # Counter here finds how many ground truth bboxes we get
+        # for each training example, so let's say img 0 has 3,
+        # img 1 has 5 then we will obtain a dictionary with:
+        # amount_bboxes = {0:3, 1:5}
+        amount_bboxes = Counter([int(gt[0]) for gt in ground_truths])
 
-        # Convert idx to idx tensor for find num of true boxes by img idx
-        idx_tensor = tf.TensorArray(tf.int32, size=0, dynamic_size=True)
-        for i in tf.range(tf.math.reduce_max(idx) + 1):
-            idx_tensor = idx_tensor.write(idx_tensor.size(), i)
-        idx_tensor = idx_tensor.stack()
-
-        # Get hash table: key - img_idx, value - idx_tensor
-        table = tf.lookup.experimental.DenseHashTable(
-            key_dtype=tf.int32,
-            value_dtype=tf.int32,
-            default_value=-1,
-            empty_key=-1,
-            deleted_key=-2
-        )
-        table.insert(img_idx, idx_tensor)
-
-        # Get true boxes num array
-        ground_truth_num = tf.TensorArray(tf.int32, size=tf.math.reduce_max(idx) + 1, dynamic_size=True, clear_after_read=False)
-        for i in tf.range(tf.math.reduce_max(idx) + 1):
-            ground_truth_num = ground_truth_num.write(i, tf.zeros(tf.math.reduce_max(count), dtype=tf.int32))
-
+        # We then go through each key, val in this dictionary
+        # and convert to the following (w.r.t same example):
+        # ammount_bboxes = {0:torch.tensor[0,0,0], 1:torch.tensor[0,0,0,0,0]}
+        for key, val in amount_bboxes.items():
+            amount_bboxes[key] = torch.zeros(val)
+        
         # sort by confidence score
-        detections = tf.gather(detections, tf.argsort(detections[..., 2], direction='DESCENDING'))
-        true_positive = tf.TensorArray(tf.float32, size=tf.shape(detections)[0], element_shape=())
-        false_positive = tf.TensorArray(tf.float32, size=tf.shape(detections)[0], element_shape=())
+        detections = detections[torch.sort(detections[..., 2], descending=True)[1]]
+        true_positive = torch.zeros((len(detections)))
+        false_positive = torch.zeros((len(detections)))
 
-        detections_size = tf.shape(detections)[0]
-        detection_idx = tf.constant(0, dtype=tf.int32)
-        for detection in detections:
-            # tf.print('progressing of detection: ', detection_idx, ' / ', detections_size)
-            # tf.print('detection_img_idx: ', detection[0])
-            # tf.print('detection_confidence: ', detection[2])
+        for detection_idx, detection in enumerate(detections):
+            # Only take out the ground_truths that have the same
+            # training idx as detection
+            ground_truth_img = ground_truths[torch.where(ground_truths[..., 0] == detection[0])[0]]
 
-            ground_truth_img = tf.gather(ground_truths, tf.reshape(tf.where(ground_truths[..., 0] == detection[0]),
-                                                                   shape=(-1,)))
-            # tf.print('ground_truth_img: ', tf.shape(ground_truth_img)[0])
+            num_gts = len(ground_truth_img)
+            best_iou = 0
 
-            best_iou = tf.TensorArray(tf.float32, size=1, element_shape=(1,), clear_after_read=False)
-            best_gt_idx = tf.TensorArray(tf.int32, size=1, element_shape=(), clear_after_read=False)
+            for idx, gt in enumerate(ground_truth_img):
+                iou = intersection_over_union(detection[3:], gt[3:])
 
-            gt_idx = tf.constant(0, dtype=tf.int32)
-            for gt_img in ground_truth_img:
-                iou = intersection_over_union(detection[3:], gt_img[3:])
+                if iou > best_iou:
+                    best_iou = iou
+                    best_gt_idx = idx
 
-                if iou > best_iou.read(0):
-                    best_iou = best_iou.write(0, iou)
-                    best_gt_idx = best_gt_idx.write(0, gt_idx)
-
-                gt_idx += 1
-
-            if best_iou.read(0) > iou_threshold:
-                # Get current detections img_idx
-                cur_det_img_idx = tf.cast(detection[0], dtype=tf.int32)
-
-                # Get row idx of ground_truth_num array
-                gt_row_idx = table.lookup(cur_det_img_idx)
-
-                # Get 'current img ground_truth_num tensor'
-                cur_gt_num_tensor = ground_truth_num.read(gt_row_idx)
-
-                # Get idx of current best ground truth
-                cur_best_gt_idx = best_gt_idx.read(0)
-
-                if cur_gt_num_tensor[cur_best_gt_idx] == 0:
-                    true_positive = true_positive.write(detection_idx, 1)
-
-                    # change cur_gt_num_tensor[cur_best_gt_idx] to 1
-                    cur_gt_num_tensor = change_tensor(cur_gt_num_tensor, cur_best_gt_idx)
-
-                    # update ground_truth_num array
-                    ground_truth_num = ground_truth_num.write(gt_row_idx, cur_gt_num_tensor)
-
+            if best_iou > iou_threshold:
+                # only detect ground truth detection once
+                if amount_bboxes[int(detection[0])][best_gt_idx] == 0:
+                    # true positive and add this bounding box to seen
+                    true_positive[detection_idx] = 1
+                    amount_bboxes[int(detection[0])][best_gt_idx] = 1
                 else:
-                    false_positive = false_positive.write(detection_idx, 1)
+                    false_positive[detection_idx] = 1
 
             # if IOU is lower then the detection is a false positive
             else:
-                false_positive = false_positive.write(detection_idx, 1)
+                false_positive[detection_idx] = 1
 
-            # ground_truth_img.close()
-            best_iou.close()
-            best_gt_idx.close()
-            detection_idx += 1
+        tf_cumsum = torch.cumsum(true_positive, dim=0)
+        fp_cumsum = torch.cumsum(false_positive, dim=0)
+        recalls = tf_cumsum / (total_true_boxes + epsilon)
+        precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
+        precisions = torch.cat((torch.tensor([1]), precisions))
+        recalls = torch.cat((torch.tensor([0]), recalls))
+        # torch.trapz for numerical integration
+        average_precisions.append(torch.trapz(precisions, recalls))
 
-        # Compute the cumulative sum of the tensor
-        tp_cumsum = tf.math.cumsum(true_positive.stack(), axis=0)
-        fp_cumsum = tf.math.cumsum(false_positive.stack(), axis=0)
+    return torch.mean(torch.stack(average_precisions))
 
-        # Calculate recalls and precisions
-        recalls = tf.math.divide(tp_cumsum, (total_true_boxes + epsilon))
-        precisions = tf.math.divide(tp_cumsum, (tp_cumsum + fp_cumsum + epsilon))
 
-        # Append start point value of precision-recall graph
-        precisions = tf.concat([tf.constant([1], dtype=tf.float32), precisions], axis=0)
-        recalls = tf.concat([tf.constant([0], dtype=tf.float32), recalls], axis=0)
-        # tf.print(precisions)
-        # tf.print(recalls)
-
-        # Calculate area of precision-recall graph
-        average_precision_value = tf.py_function(func=np.trapz,
-                                                 inp=[precisions, recalls],
-                                                 Tout=tf.float32)
-        average_precisions = average_precisions.write(average_precisions.size(), average_precision_value)
-        # tf.print('average precision: ', average_precision_value)
-
-        ground_truth_num.close()
-        true_positive.close()
-        false_positive.close()
-
-    # tf.print(average_precisions.stack())
-    # tf.print('mAP: ', tf.math.reduce_mean(average_precisions.stack()))
-    return tf.math.reduce_mean(average_precisions.stack())
+if __name__ == '__main__':
+    num_classes = 3
+    num_boxes = 2
+    
+    y_true = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
+    y_true[:, 0, 0, 0] = 1 # class
+    y_true[:, 0, 0, num_classes] = 1 # confidence1
+    y_true[:, 0, 0, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
+    
+    y_true[:, 3, 3, 1] = 1 # class
+    y_true[:, 3, 3, num_classes] = 1 # confidence1
+    y_true[:, 3, 3, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
+    
+    y_true[:, 6, 6, 2] = 1 # class
+    y_true[:, 6, 6, num_classes] = 1 # confidence1
+    y_true[:, 6, 6, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
+    
+    y_true_tensor = torch.as_tensor(y_true)
+    print(f'{y_true_tensor.shape}, {y_true_tensor.dtype}')
+    
+    y_pred = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
+    y_pred[:, 0, 0, :num_classes] = [0.8, 0.5, 0.1] # class
+    y_pred[:, 0, 0, num_classes] = 0.6 # confidence1
+    y_pred[:, 0, 0, num_classes+1:num_classes+5] = [0.49, 0.49, 0.1, 0.1] # box1
+    y_pred[:, 0, 0, num_classes+5] = 0.2 # confidence2
+    y_pred[:, 0, 0, num_classes+6:num_classes+10] = [0.45, 0.45, 0.1, 0.1] # box2
+    
+    y_pred[:, 3, 3, :num_classes] = [0.2, 0.8, 0.1] # class
+    y_pred[:, 3, 3, num_classes] = 0.1 # confidence1
+    y_pred[:, 3, 3, num_classes+1:num_classes+5] = [0.45, 0.45, 0.1, 0.1] # box1
+    y_pred[:, 3, 3, num_classes+5] = 0.9 # confidence2
+    y_pred[:, 3, 3, num_classes+6:num_classes+10] = [0.49, 0.49, 0.1, 0.1] # box2
+    
+    y_pred[:, 6, 6, :num_classes] = [0.1, 0.5, 0.8] # class
+    y_pred[:, 6, 6, num_classes] = 0.6 # confidence1
+    y_pred[:, 6, 6, num_classes+1:num_classes+5] = [0.49, 0.49, 0.1, 0.1] # box1
+    y_pred[:, 6, 6, num_classes+5] = 0.2 # confidence2
+    y_pred[:, 6, 6, num_classes+6:num_classes+10] = [0.45, 0.45, 0.1, 0.1] # box2
+    
+    y_pred_tensor = torch.as_tensor(y_pred)
+    print(f'{y_pred_tensor.shape}, {y_pred_tensor.dtype}')
+    
+    # mAP Test
+    map_metric = MeanAveragePrecision(num_classes, num_boxes)
+    map_metric.update_state(y_true_tensor, y_pred_tensor)
+    map = map_metric.result()    
+    print(map)
+    map_metric.reset_states()
+    
+    map_metric.update_state(y_true_tensor, y_pred_tensor)
+    map = map_metric.result()    
+    print(map)
+    

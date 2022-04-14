@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 from utils.module_select import get_optimizer
 from models.loss.yolov1_loss import YoloV1Loss
 # from module.lr_scheduler import CosineAnnealingWarmUpRestarts
+from utils.metric import MeanAveragePrecision
 
 
 class YoloV1Detector(pl.LightningModule):
@@ -11,6 +12,7 @@ class YoloV1Detector(pl.LightningModule):
         self.save_hyperparameters(ignore='model')
         self.model = model
         self.loss_fn = YoloV1Loss(cfg['num_classes'], cfg['num_boxes'])
+        self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['num_boxes'])
 
     def forward(self, x):
         predictions = self.model(x)
@@ -24,20 +26,20 @@ class YoloV1Detector(pl.LightningModule):
 
         return loss
 
-    # def on_validation_epoch_start(self):
-    #     self.mAP.reset_accumulators()
+    def on_validation_epoch_start(self):
+        self.map_metric.reset_states()
 
     def validation_step(self, batch, batch_idx):
         pred = self.model(batch['image'])
         loss = self.loss_fn(batch['label'], pred)
 
         self.log('val_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
+
+        self.map_metric.update_state(batch['label'], pred)        
         
-    # def on_validation_epoch_end(self) -> None:
-    #     ap_per_class, mAP = self.mAP.compute_map()
-    #     self.log('val_mAP', mAP, on_epoch=True, prog_bar=True, sync_dist=True)
-    #     for k, v in ap_per_class.items():
-    #         self.log(f'val_AP_{k}', v, on_epoch=True, sync_dist=True)
+    def on_validation_epoch_end(self) -> None:
+        map = self.map_metric.result()
+        self.log('val_mAP', map, prog_bar=True, logger=True, on_epoch=True, on_step=False)
 
     def configure_optimizers(self):
         cfg = self.hparams.cfg
