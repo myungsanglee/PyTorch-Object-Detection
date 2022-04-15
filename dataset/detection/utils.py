@@ -178,7 +178,7 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
     return boxes_after_nms
 
 
-def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.4):
+def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     """Does Non Max Suppression given boxes
 
     Arguments:

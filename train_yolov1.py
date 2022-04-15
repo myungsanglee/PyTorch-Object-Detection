@@ -1,15 +1,14 @@
 import argparse
 import platform
 
-import albumentations
-import albumentations.pytorch
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
+from pytorch_lightning.plugins import DDPPlugin
 from torch import nn
 import torchvision.models as models
 
-from dataset.detection import yolo_dataset
+from dataset.detection.yolo_dataset import YoloV1DataModule
 from utils.yaml_helper import get_train_configs
 from module.detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
@@ -36,34 +35,11 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 def train(cfg):
-    input_size = cfg['input_size']
-    
-    train_transforms = albumentations.Compose([
-        albumentations.HorizontalFlip(),
-        albumentations.ColorJitter(
-            brightness=0.5,
-            contrast=0.2,
-            saturation=0.5,
-            hue=0.1    
-        ),
-        albumentations.RandomResizedCrop(input_size, input_size, (0.8, 1)),
-        # albumentations.Resize(input_size, input_size, always_apply=True),
-        albumentations.Normalize(0, 1),
-        albumentations.pytorch.ToTensorV2(),
-    ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
-
-    valid_transform = albumentations.Compose([
-        albumentations.Resize(input_size, input_size, always_apply=True),
-        albumentations.Normalize(0, 1),
-        albumentations.pytorch.ToTensorV2(),
-    ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
-
-    data_module = yolo_dataset.YoloV1DataModule(
+    data_module = YoloV1DataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 
-        train_transforms=train_transforms, 
-        val_transforms=valid_transform,
+        input_size=cfg['input_size'],
         batch_size=cfg['batch_size'],
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
@@ -80,11 +56,10 @@ def train(cfg):
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
-    print('-'*100, '\n', data_module.train_dataloader().__len__(), '-'*100, '\n')
+
     model_module = YoloV1Detector(
         model=model, 
-        cfg=cfg, 
-        epoch_length=data_module.train_dataloader().__len__()
+        cfg=cfg
     )
 
     # model_module = YoloV1Detector.load_from_checkpoint(
@@ -110,7 +85,8 @@ def train(cfg):
         logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg), default_hp_metric=False),
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
-        strategy='ddp' if platform.system() != 'Windows' else None,
+        # strategy='ddp' if platform.system() != 'Windows' else None,
+        plugins=DDPPlugin(find_unused_parameters=False) if platform.system() != 'Windows' else None,
         callbacks=callbacks,
         **cfg['trainer_options']
     )

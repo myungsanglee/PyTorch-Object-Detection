@@ -1,3 +1,4 @@
+from distutils.errors import LibError
 import sys
 sys.path.append('C:/my_github/PyTorch-Object-Detection')
 
@@ -28,6 +29,24 @@ class YoloV1(nn.Module):
         # )
         
         # version_1
+        # self.yolov1_head = nn.Sequential(
+        #     nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
+        #     nn.BatchNorm2d(1024),
+        #     nn.ReLU(),
+            
+        #     nn.Conv2d(1024, 1024, 3, 2, 1),
+        #     nn.BatchNorm2d(1024),
+        #     nn.ReLU(),
+            
+        #     nn.Flatten(),
+            
+        #     nn.Linear(1024*4*4, 2048),
+        #     nn.ReLU(),
+        #     nn.Dropout(0.5),
+        #     nn.Linear(2048, 7*7*(self.num_classes + (5*self.num_boxes)))
+        # )
+        
+        # version_2
         self.yolov1_head = nn.Sequential(
             nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
             nn.BatchNorm2d(1024),
@@ -39,10 +58,9 @@ class YoloV1(nn.Module):
             
             nn.Flatten(),
             
-            nn.Linear(1024*4*4, 2048),
+            nn.Linear(1024*4*4, 496),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(2048, 7*7*(self.num_classes + (5*self.num_boxes)))
+            nn.Linear(496, 7*7*(self.num_classes + (5*self.num_boxes)))
         )
         
         weight_initialize(self.yolov1_head)

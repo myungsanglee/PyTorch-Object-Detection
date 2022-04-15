@@ -74,25 +74,53 @@ class YoloV1Dataset(Dataset):
         return boxes
 
 class YoloV1DataModule(pl.LightningDataModule):
-    def __init__(self, train_list, val_list, workers, train_transforms, val_transforms, batch_size, num_classes, num_boxes):
+    def __init__(self, train_list, val_list, workers, input_size, batch_size, num_classes, num_boxes):
         super().__init__()
         self.train_list = train_list
         self.val_list = val_list
         self.workers = workers
-        self.train_transforms = train_transforms
-        self.val_transforms = val_transforms
+        self.input_size = input_size
         self.batch_size = batch_size
         self.num_classes = num_classes
         self.num_boxes = num_boxes
+        
+    def setup(self, stage=None):
+        train_transforms = albumentations.Compose([
+            albumentations.HorizontalFlip(),
+            albumentations.ColorJitter(
+                brightness=0.5,
+                contrast=0.2,
+                saturation=0.5,
+                hue=0.1    
+            ),
+            albumentations.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
+            albumentations.Normalize(0, 1),
+            albumentations.pytorch.ToTensorV2(),
+        ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
+
+        valid_transform = albumentations.Compose([
+            albumentations.Resize(self.input_size, self.input_size, always_apply=True),
+            albumentations.Normalize(0, 1),
+            albumentations.pytorch.ToTensorV2(),
+        ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
+        
+        self.train_dataset = YoloV1Dataset(
+            train_transforms, 
+            self.train_list, 
+            self.num_classes, 
+            self.num_boxes
+        )
+        
+        self.valid_dataset = YoloV1Dataset(
+            valid_transform, 
+            self.val_list, 
+            self.num_classes, 
+            self.num_boxes
+        )
 
     def train_dataloader(self):
         return DataLoader(
-            YoloV1Dataset(
-                self.train_transforms, 
-                self.train_list, 
-                self.num_classes, 
-                self.num_boxes
-            ),
+            self.train_dataset,
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.workers,
@@ -102,12 +130,7 @@ class YoloV1DataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            YoloV1Dataset(
-                self.val_transforms, 
-                self.val_list, 
-                self.num_classes, 
-                self.num_boxes
-            ),
+            self.valid_dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.workers,

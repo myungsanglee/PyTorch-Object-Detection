@@ -5,7 +5,7 @@ input_size: 448
 num_classes : 3
 num_boxes : 2
 
-epochs: 100
+epochs: 1000
 
 train_list : './data/train.txt'
 val_list : './data/val.txt'
@@ -18,22 +18,22 @@ save_freq: 5
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
 devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
-optimizer: 'adam'
-optimizer_options:
-  lr: 1e-3
-  # weight_decay: 1e-5
+# optimizer: 'adam'
+# optimizer_options:
+#   lr: 1e-3
+#   weight_decay: 1e-5
 
 # optimizer: 'radam'
 # optimizer_options:
 #   lr: 1e-3
 #   weight_decay: 1e-5
 
-# optimizer: 'sgd'
-# optimizer_options:
-#   lr: 1e-3
-#   nesterov: true
-#   momentum: 0.9
-#   weight_decay: 1e-5
+optimizer: 'sgd'
+optimizer_options:
+  lr: 1e-4
+  nesterov: true
+  momentum: 0.9
+  weight_decay: 1e-5
 
 trainer_options:
   check_val_every_n_epoch: 5
