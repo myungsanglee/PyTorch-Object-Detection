@@ -27,10 +27,14 @@ class MeanAveragePrecision:
         for idx in torch.arange(y_true.size()[0]):
             pred_nms = non_max_suppression(pred_boxes[idx], iou_threshold=0.5, conf_threshold=0.4)
             pred_img_idx = torch.zeros([pred_nms.size()[0], 1], dtype=torch.float32) + self.img_idx
+            if pred_nms.is_cuda:
+                pred_img_idx = pred_img_idx.cuda()
             pred_concat = torch.concat([pred_img_idx, pred_nms], dim=1)
 
             true_nms = non_max_suppression(true_boxes[idx], iou_threshold=0.5, conf_threshold=0.4)
             true_img_idx = torch.zeros([true_nms.size()[0], 1], dtype=torch.float32) + self.img_idx
+            if true_nms.is_cuda:
+                true_img_idx = true_img_idx.cuda()
             true_concat = torch.concat([true_img_idx, true_nms], dim=1)
 
             if self.img_idx == 0.:
@@ -66,7 +70,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
     epsilon = 1e-6
 
     for c in torch.arange(num_classes, dtype=torch.float32):
-        print('Calculating AP: ', int(c), ' / ', num_classes)
+        # print('\nCalculating AP: ', int(c), ' / ', num_classes)
 
         # detections, ground_truths variables in specific class
         detections = pred_boxes[torch.where(pred_boxes[..., 1] == c)[0]]

@@ -80,7 +80,7 @@ def train(cfg):
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
-
+    print('-'*100, '\n', data_module.train_dataloader().__len__(), '-'*100, '\n')
     model_module = YoloV1Detector(
         model=model, 
         cfg=cfg, 
@@ -95,7 +95,7 @@ def train(cfg):
     # )
 
     callbacks = [
-        LearningRateMonitor(logging_interval='step'),
+        LearningRateMonitor(logging_interval='epoch'),
         ModelCheckpoint(
             monitor='val_loss', 
             save_last=True,

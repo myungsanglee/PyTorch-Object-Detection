@@ -60,7 +60,7 @@ def test(cfg):
 
     model_module = YoloV1Detector.load_from_checkpoint(
         # checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=773-step=773.ckpt',
-        checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=800-step=800.ckpt',
+        # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=800-step=800.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/last.ckpt',
         model=model,
         cfg=cfg

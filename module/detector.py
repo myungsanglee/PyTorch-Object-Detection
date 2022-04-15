@@ -1,4 +1,6 @@
+from tabnanny import verbose
 import pytorch_lightning as pl
+from torch.optim.lr_scheduler import MultiStepLR
 
 from utils.module_select import get_optimizer
 from models.loss.yolov1_loss import YoloV1Loss
@@ -58,13 +60,15 @@ class YoloV1Detector(pl.LightningModule):
         #     T_up=epoch_length,
         #     gamma=0.96
         # )
-
-        # return {
-        #     "optimizer": optim,
-        #     "lr_scheduler": {
-        #         "scheduler": scheduler,
-        #         'interval': 'step'
-        #     }
-        # }
         
-        return optim
+        epochs = cfg['epochs']
+        scheduler = MultiStepLR(optim, milestones=[int(epochs*0.8), int(epochs*0.9)], gamma=0.1)
+
+        return {
+            "optimizer": optim,
+            "lr_scheduler": {
+                "scheduler": scheduler
+            }
+        }
+        
+        # return optim
