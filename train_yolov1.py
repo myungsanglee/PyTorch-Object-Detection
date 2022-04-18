@@ -48,7 +48,7 @@ def train(cfg):
     vgg16 = models.vgg16(pretrained=True)
     backbone = vgg16.features
     # backbone = nn.Sequential(*list(backbone.features.children()))
-    # set_parameter_requires_grad(backbone, True)
+    set_parameter_requires_grad(backbone, True)
     
     model = YoloV1(
         backbone=backbone,

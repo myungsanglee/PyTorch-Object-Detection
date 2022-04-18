@@ -62,7 +62,8 @@ def test(cfg):
         # checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=773-step=773.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=800-step=800.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_2/checkpoints/epoch=174-step=174.ckpt',
-        checkpoint_path='./saved/yolov1_test/version_3/checkpoints/epoch=524-step=524.ckpt',
+        # checkpoint_path='./saved/yolov1_test/version_3/checkpoints/epoch=524-step=524.ckpt',
+        checkpoint_path='./saved/yolov1_test/version_4/checkpoints/epoch=794-step=794.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/last.ckpt',
         model=model,
         cfg=cfg
@@ -74,7 +75,7 @@ def test(cfg):
     # Inference
     for sample in data_loader:
         
-        for _ in range(5):
+        for _ in range(10):
             batch_x = sample['image']
             batch_y = sample['label']
 
@@ -85,7 +86,7 @@ def test(cfg):
             with torch.no_grad():
                 predictions = model_module(batch_x)
             boxes = yolov1_decoder(predictions)
-            print(f'Inference: {(time.time()-before)*1000}ms')
+            print(f'Inference: {(time.time()-before)*1000:.2f}ms')
             
             # batch_x to img
             if torch.cuda.is_available:
