@@ -15,6 +15,7 @@ from module.detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
 from dataset.detection.utils import get_tagged_img, DecodeYoloV1
 from dataset.detection.yolo_dataset import YoloV1Dataset
+from utils.module_select import get_model
 
 
 def set_parameter_requires_grad(model, feature_extracting):
@@ -45,12 +46,12 @@ def test(cfg):
     )
 
     # Load trained model
-    vgg16 = models.vgg16(pretrained=True)
-    backbone = vgg16.features
+    # vgg16 = models.vgg16(pretrained=True)
+    backbone = get_model(cfg['backbone'])
     
     model = YoloV1(
         backbone=backbone,
-        backbone_out_channels=512,
+        backbone_out_channels=backbone(torch.randn((1, 3, cfg['input_size'], cfg['input_size']), dtype=torch.float32)).size()[1],
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
@@ -63,7 +64,9 @@ def test(cfg):
         # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=800-step=800.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_2/checkpoints/epoch=174-step=174.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_3/checkpoints/epoch=524-step=524.ckpt',
-        checkpoint_path='./saved/yolov1_test/version_4/checkpoints/epoch=794-step=794.ckpt',
+        # checkpoint_path='./saved/yolov1_test/version_4/checkpoints/epoch=794-step=794.ckpt',
+        # checkpoint_path='./saved/yolov1_test/version_5/checkpoints/epoch=514-step=514.ckpt',
+        checkpoint_path='./saved/yolov1_test/version_6/checkpoints/epoch=799-step=799.ckpt',
         # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/last.ckpt',
         model=model,
         cfg=cfg
@@ -97,8 +100,8 @@ def test(cfg):
         
             true_boxes = yolov1_decoder(batch_y)
         
-        tagged_img = get_tagged_img(img, boxes, './data/test.names', (0, 255, 0))
-        tagged_img = get_tagged_img(tagged_img, true_boxes, './data/test.names', (0, 0, 255))
+        tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
+        tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('test', tagged_img)
         key = cv2.waitKey(0)

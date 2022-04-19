@@ -9,7 +9,6 @@ import torchvision.models as models
 
 from models.initialize import weight_initialize
 from models.layers.conv_block import Conv2dBnRelu
-from utils.module_select import get_model
 
 
 class YoloV1(nn.Module):
@@ -83,20 +82,18 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 if __name__ == '__main__':
-    # vgg16 = models.vgg16(pretrained=True)
+    vgg16 = models.vgg16(pretrained=True)
 
-    # # backbone = nn.Sequential(*list(backbone.features.children()))
-    # backbone = vgg16.features
-    # torchsummary.summary(backbone, (3, 448, 448), batch_size=1, device='cpu')
-    # set_parameter_requires_grad(backbone, True)
+    # backbone = nn.Sequential(*list(backbone.features.children()))
+    backbone = vgg16.features
+    torchsummary.summary(backbone, (3, 448, 448), batch_size=1, device='cpu')
+    set_parameter_requires_grad(backbone, True)
 
-    backbone = get_model('darknet19')
-
-    print(backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).size())
+    print(backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).shape)
 
     model = YoloV1(
         backbone=backbone,
-        backbone_out_channels=backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).size()[1],
+        backbone_out_channels=512,
         num_classes=3,
         num_boxes=2
     )
