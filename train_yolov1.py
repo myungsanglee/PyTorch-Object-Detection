@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
 from pytorch_lightning.plugins import DDPPlugin
-from torch import nn
+import torch
 import torchvision.models as models
 
 from dataset.detection.yolo_dataset import YoloV1DataModule
@@ -13,6 +13,7 @@ from utils.yaml_helper import get_train_configs
 from module.detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
 from utils.utility import make_model_name
+from utils.module_select import get_model
 
 
 def add_experimental_callbacks(cfg, train_callbacks):
@@ -45,14 +46,16 @@ def train(cfg):
         num_boxes=cfg['num_boxes']
     )
 
-    vgg16 = models.vgg16(pretrained=True)
-    backbone = vgg16.features
-    # backbone = nn.Sequential(*list(backbone.features.children()))
-    set_parameter_requires_grad(backbone, True)
+    # vgg16 = models.vgg16(pretrained=True)
+    # backbone = vgg16.features
+    # # backbone = nn.Sequential(*list(backbone.features.children()))
+    # set_parameter_requires_grad(backbone, True)
+    
+    backbone = get_model(cfg['backbone'])
     
     model = YoloV1(
         backbone=backbone,
-        backbone_out_channels=512,
+        backbone_out_channels=backbone(torch.randn((1, 3, cfg['input_size'], cfg['input_size']), dtype=torch.float32)).size()[1],
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )

@@ -21,7 +21,7 @@ class _VGG(nn.Module):
         self.num_classes = num_classes
         self.stage_channels = []
 
-        self.backbone = self._make_layers(cfg, batch_norm)
+        self.features = self._make_layers(cfg, batch_norm)
         self.classification = nn.Sequential(
             Conv2dBnRelu(512, 1280, 1),
             nn.AdaptiveAvgPool2d(1),
@@ -29,7 +29,7 @@ class _VGG(nn.Module):
         )
 
     def forward(self, x):
-        x = self.backbone(x)
+        x = self.features(x)
         pred = self.classification(x)
         b, c, _, _ = pred.size()
         pred = pred.view(b, c)
