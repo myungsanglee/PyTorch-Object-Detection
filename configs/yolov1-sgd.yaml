@@ -1,17 +1,17 @@
 model : 'yolov1'
 backbone: 'darknet19'
-dataset_name : 'test'
+dataset_name : 'voc'
 input_size: 448
-num_classes : 3
+num_classes : 20
 num_boxes : 2
 
 epochs: 1000
 
-train_list : './data/train.txt'
-val_list : './data/val.txt'
-names : './data/test.names'
-workers: 1 # number of workers to generate data
-batch_size: 1
+train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
+val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
+names : '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'
+workers: 32 # number of workers to generate data
+batch_size: 64
 
 save_dir : './saved' # dir for saving log, weights
 save_freq: 5
@@ -20,7 +20,7 @@ trainer_options:
   check_val_every_n_epoch: 5
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 # optimizer: 'adam'
 # optimizer_options:
@@ -57,4 +57,3 @@ scheduler_options:
   eta_max: 1e-3
   T_up: 4
   gamma: 0.9
-

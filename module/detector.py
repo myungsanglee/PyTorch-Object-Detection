@@ -1,8 +1,6 @@
-from tabnanny import verbose
 import pytorch_lightning as pl
-from torch.optim.lr_scheduler import MultiStepLR
 
-from utils.module_select import get_optimizer
+from utils.module_select import get_optimizer, get_scheduler
 from models.loss.yolov1_loss import YoloV1Loss
 from utils.metric import MeanAveragePrecision
 
@@ -50,14 +48,41 @@ class YoloV1Detector(pl.LightningModule):
             **cfg['optimizer_options']
         )
         
-        epochs = cfg['epochs']
-        scheduler = MultiStepLR(optim, milestones=[int(epochs*0.8), int(epochs*0.9)], gamma=0.1)
-
-        return {
-            "optimizer": optim,
-            "lr_scheduler": {
-                "scheduler": scheduler
-            }
-        }
+        try:
+            scheduler = get_scheduler(
+                cfg['scheduler'],
+                optim,
+                **cfg['scheduler_options']
+            )
+            print(f'\n\n scheduler \n\n')
+            return {
+                "optimizer": optim,
+                "lr_scheduler": {
+                    "scheduler": scheduler
+                }
+            } 
         
-        # return optim
+        except KeyError:
+            print(f'\n\n No scheduler \n\n')
+            return optim
+        
+        # epochs = cfg['epochs']
+        # scheduler = MultiStepLR(optim, milestones=[int(epochs*0.8), int(epochs*0.9)], gamma=0.1)
+        
+        # scheduler = CosineAnnealingWarmUpRestarts(
+        #     optimizer=optim,
+        #     T_0=20,
+        #     T_mult=2,
+        #     eta_max=cfg['optimizer_options']['lr']*100,
+        #     T_up=4,
+        #     gamma=0.9
+        # )
+        
+        # scheduler = CosineAnnealingWarmRestarts(
+        #     optimizer=optim,
+        #     T_0=50,
+        #     T_mult=2,
+        #     eta_min=0.001
+        # )
+
+

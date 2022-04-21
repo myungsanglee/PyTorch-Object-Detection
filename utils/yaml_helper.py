@@ -31,6 +31,15 @@ def get_train_configs(file):
 
 
 if __name__ == "__main__":
-    cfg = get_train_configs("configs/cls_vgg16.yaml")
+    cfg = get_train_configs("configs/yolov1-adam.yaml")
     print(cfg)
     print(cfg['optimizer_options']['lr'])
+    try: 
+        cfg['a']
+    except KeyError:
+        print(f'ldjfakljladsjklfj')
+    
+    print(type(cfg['scheduler_options']['gamma']))
+    print(cfg['scheduler_options']['gamma'])
+    
+    
