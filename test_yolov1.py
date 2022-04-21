@@ -60,14 +60,7 @@ def test(cfg):
         model = model.to('cuda')
 
     model_module = YoloV1Detector.load_from_checkpoint(
-        # checkpoint_path='./saved/yolov1_test/version_0/checkpoints/epoch=773-step=773.ckpt',
-        # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/epoch=800-step=800.ckpt',
-        # checkpoint_path='./saved/yolov1_test/version_2/checkpoints/epoch=174-step=174.ckpt',
-        # checkpoint_path='./saved/yolov1_test/version_3/checkpoints/epoch=524-step=524.ckpt',
-        # checkpoint_path='./saved/yolov1_test/version_4/checkpoints/epoch=794-step=794.ckpt',
-        # checkpoint_path='./saved/yolov1_test/version_5/checkpoints/epoch=514-step=514.ckpt',
-        checkpoint_path='./saved/yolov1_test/version_6/checkpoints/epoch=799-step=799.ckpt',
-        # checkpoint_path='./saved/yolov1_test/version_1/checkpoints/last.ckpt',
+        checkpoint_path='./saved/yolov1_voc/version_0/checkpoints/epoch=804-step=177099.ckpt',
         model=model,
         cfg=cfg
     )
