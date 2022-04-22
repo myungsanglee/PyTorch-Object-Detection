@@ -65,24 +65,3 @@ class YoloV1Detector(pl.LightningModule):
         except KeyError:
             print(f'\n\n No scheduler \n\n')
             return optim
-        
-        # epochs = cfg['epochs']
-        # scheduler = MultiStepLR(optim, milestones=[int(epochs*0.8), int(epochs*0.9)], gamma=0.1)
-        
-        # scheduler = CosineAnnealingWarmUpRestarts(
-        #     optimizer=optim,
-        #     T_0=20,
-        #     T_mult=2,
-        #     eta_max=cfg['optimizer_options']['lr']*100,
-        #     T_up=4,
-        #     gamma=0.9
-        # )
-        
-        # scheduler = CosineAnnealingWarmRestarts(
-        #     optimizer=optim,
-        #     T_0=50,
-        #     T_mult=2,
-        #     eta_min=0.001
-        # )
-
-
