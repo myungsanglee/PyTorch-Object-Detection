@@ -3,12 +3,11 @@ import sys
 sys.path.append('C:/my_github/PyTorch-Object-Detection')
 
 import torch
-from torch import nn, sigmoid
+from torch import nn
 import torchsummary
 import torchvision.models as models
 
 from models.initialize import weight_initialize
-from models.layers.conv_block import Conv2dBnRelu
 from utils.module_select import get_model
 
 
@@ -26,28 +25,18 @@ class YoloV1(nn.Module):
         #     nn.BatchNorm2d(1024),
         #     nn.ReLU(),
             
-        #     nn.Conv2d(1024, (self.num_classes + (5*self.num_boxes)), 1)
-        # )
-        
-        # version_1
-        # self.yolov1_head = nn.Sequential(
-        #     nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
-        #     nn.BatchNorm2d(1024),
-        #     nn.ReLU(),
-            
         #     nn.Conv2d(1024, 1024, 3, 2, 1),
         #     nn.BatchNorm2d(1024),
         #     nn.ReLU(),
             
         #     nn.Flatten(),
             
-        #     nn.Linear(1024*4*4, 2048),
+        #     nn.Linear(1024*4*4, 496),
         #     nn.ReLU(),
-        #     nn.Dropout(0.5),
-        #     nn.Linear(2048, 7*7*(self.num_classes + (5*self.num_boxes)))
+        #     nn.Linear(496, 7*7*(self.num_classes + (5*self.num_boxes)))
         # )
         
-        # version_2
+        # version_1
         self.yolov1_head = nn.Sequential(
             nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
             nn.BatchNorm2d(1024),
@@ -59,9 +48,10 @@ class YoloV1(nn.Module):
             
             nn.Flatten(),
             
-            nn.Linear(1024*4*4, 496),
+            nn.Linear(1024*4*4, 4096),
             nn.ReLU(),
-            nn.Linear(496, 7*7*(self.num_classes + (5*self.num_boxes)))
+            nn.Dropout(0.5),
+            nn.Linear(4096, 7*7*(self.num_classes + (5*self.num_boxes)))
         )
         
         weight_initialize(self.yolov1_head)

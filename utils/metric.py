@@ -18,6 +18,8 @@ class MeanAveragePrecision:
         self._num_boxes = num_boxes
 
     def reset_states(self):
+        self.all_true_boxes_variable = 0
+        self.all_pred_boxes_variable = 0
         self.img_idx = 0
 
     def update_state(self, y_true, y_pred):
@@ -48,7 +50,7 @@ class MeanAveragePrecision:
 
     def result(self):
         return mean_average_precision(self.all_true_boxes_variable, self.all_pred_boxes_variable, self._num_classes)
-   
+    
     
 def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.5):
     """Calculates mean average precision

@@ -389,16 +389,17 @@ class DecodeYoloV1(nn.Module):
     '''Decode Yolo V1 Predictions to bunding boxes
     '''
     
-    def __init__(self, num_classes, num_boxes):
+    def __init__(self, num_classes, num_boxes, conf_threshold=0.25):
         super().__init__()
         self.num_classes = num_classes
         self.num_boxes = num_boxes
+        self.conf_threshold = conf_threshold
         
     def forward(self, x):
         decode_pred = decode_predictions(x, self.num_classes, self.num_boxes)
-        boxes = non_max_suppression(decode_pred[0])
+        boxes = non_max_suppression(decode_pred[0], conf_threshold=self.conf_threshold)
         return boxes
-    
+
 
 if __name__ == '__main__':
     num_classes = 3

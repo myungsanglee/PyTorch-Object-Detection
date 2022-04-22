@@ -7,6 +7,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, St
 from pytorch_lightning.plugins import DDPPlugin
 import torch
 import torchvision.models as models
+import torchsummary
 
 from dataset.detection.yolo_dataset import YoloV1DataModule
 from utils.yaml_helper import get_train_configs
@@ -46,12 +47,12 @@ def train(cfg):
         num_boxes=cfg['num_boxes']
     )
 
-    # vgg16 = models.vgg16(pretrained=True)
-    # backbone = vgg16.features
+    vgg16 = models.vgg16(pretrained=True)
+    backbone = vgg16.features
     # # backbone = nn.Sequential(*list(backbone.features.children()))
     # set_parameter_requires_grad(backbone, True)
     
-    backbone = get_model(cfg['backbone'])
+    # backbone = get_model(cfg['backbone'])
     
     model = YoloV1(
         backbone=backbone,
@@ -59,6 +60,8 @@ def train(cfg):
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
+    
+    torchsummary.summary(model, (3, cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
 
     model_module = YoloV1Detector(
         model=model, 
