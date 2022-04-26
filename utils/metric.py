@@ -146,7 +146,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
 
 
 if __name__ == '__main__':
-    num_classes = 3
+    num_classes = 20
     num_boxes = 2
     
     y_true = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
@@ -166,19 +166,19 @@ if __name__ == '__main__':
     print(f'{y_true_tensor.shape}, {y_true_tensor.dtype}')
     
     y_pred = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
-    y_pred[:, 0, 0, :num_classes] = [0.8, 0.5, 0.1] # class
+    y_pred[:, 0, 0, :3] = [0.8, 0.5, 0.1] # class
     y_pred[:, 0, 0, num_classes] = 0.6 # confidence1
     y_pred[:, 0, 0, num_classes+1:num_classes+5] = [0.49, 0.49, 0.1, 0.1] # box1
     y_pred[:, 0, 0, num_classes+5] = 0.2 # confidence2
     y_pred[:, 0, 0, num_classes+6:num_classes+10] = [0.45, 0.45, 0.1, 0.1] # box2
     
-    y_pred[:, 3, 3, :num_classes] = [0.2, 0.8, 0.1] # class
+    y_pred[:, 3, 3, :3] = [0.2, 0.8, 0.1] # class
     y_pred[:, 3, 3, num_classes] = 0.1 # confidence1
     y_pred[:, 3, 3, num_classes+1:num_classes+5] = [0.45, 0.45, 0.1, 0.1] # box1
     y_pred[:, 3, 3, num_classes+5] = 0.9 # confidence2
     y_pred[:, 3, 3, num_classes+6:num_classes+10] = [0.49, 0.49, 0.1, 0.1] # box2
     
-    y_pred[:, 6, 6, :num_classes] = [0.1, 0.5, 0.8] # class
+    y_pred[:, 6, 6, :3] = [0.1, 0.5, 0.8] # class
     y_pred[:, 6, 6, num_classes] = 0.6 # confidence1
     y_pred[:, 6, 6, num_classes+1:num_classes+5] = [0.49, 0.49, 0.1, 0.1] # box1
     y_pred[:, 6, 6, num_classes+5] = 0.2 # confidence2
