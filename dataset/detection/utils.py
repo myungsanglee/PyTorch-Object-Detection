@@ -9,15 +9,15 @@ import cv2
 def collater(data):
     """Data Loader에서 생성된 데이터를 동일한 shape으로 정렬해서 Batch로 전달
 
-    Args:
-        data ([dict]): albumentation Transformed 객체
+    Arguments::
+        data (Dict): albumentation Transformed 객체
         'image': list of Torch Tensor len == batch_size, item shape = ch, h, w
-        'bboxes': list of list([x1, y1, w, h, cid])
+        'bboxes': list of list([cx, cy, w, h, cid])
 
     Returns:
-        [dict]: 정렬된 batch data.
-        'img': list of image tensor
-        'annot': 동일 shape으로 정렬된 tensor [x1,y1,x2,y2] format
+        Dict: 정렬된 batch data.
+        'img': list of image tensor, [batch_size, channel, height, width] shape
+        'annot': 동일 shape으로 정렬된 tensor, [batch_size, max_num_annots, 5(cx, cy, w, h, cid)] shape
     """
     imgs = [s['image'] for s in data]
     bboxes = [torch.tensor(s['bboxes'])for s in data]
@@ -474,3 +474,9 @@ if __name__ == '__main__':
     # torch tensor
     bboxes_tensor = non_max_suppression(decode_pred_tensor[0])
     print(bboxes_tensor) 
+    
+    print(f'-'*100)
+    
+    a = torch.FloatTensor([[0, 0, 0.5, 0.5]])
+    b = torch.FloatTensor([[0, 0, 0.4, 0.4], [0, 0, 0.5, 0.5]])
+    print(intersection_over_union(a, b))

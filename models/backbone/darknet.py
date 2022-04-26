@@ -74,10 +74,14 @@ def darknet19(in_channels, num_classes=1000, include_top=True):
 
 
 if __name__ == '__main__':
+    input_size = 416
+    
     model = darknet19(in_channels=3, num_classes=200, include_top=True)
-    # print(model(torch.rand(1, 3, 224, 224)).shape)
-    # print(model)
-    torchsummary.summary(model, (3, 448, 448), batch_size=1, device='cpu')
+    
+    torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
+    
+    model = model.features[:17]
+    torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
     
     # print(list(model.children()))
     # print(f'\n-------------------------------------------------------------\n')
@@ -94,3 +98,4 @@ if __name__ == '__main__':
     #                 break
 
     # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
+    
