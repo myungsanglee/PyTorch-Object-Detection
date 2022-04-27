@@ -16,5 +16,11 @@ def make_model_name(cfg):
     return cfg['model'] + '_' + cfg['dataset_name']
 
 
+def set_parameter_requires_grad(model, feature_extracting):
+    if feature_extracting:
+        for param in model.parameters():
+            param.requires_grad = False
+            
+
 if __name__ == '__main__':
     print(f'{make_divisible(32)}')

@@ -1,5 +1,6 @@
 import argparse
 import time
+import os
 
 import albumentations
 import albumentations.pytorch
@@ -16,6 +17,9 @@ from models.detector.yolov1 import YoloV1
 from dataset.detection.utils import get_tagged_img, DecodeYoloV1
 from dataset.detection.yolo_dataset import YoloV1Dataset
 from utils.module_select import get_model
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]= "1"
 
 
 def set_parameter_requires_grad(model, feature_extracting):
@@ -37,7 +41,7 @@ def test(cfg):
     data_loader = DataLoader(
         YoloV1Dataset(
             test_transform,
-            cfg['train_list'],
+            cfg['val_list'],
             cfg['num_classes'],
             cfg['num_boxes']
         ),
@@ -61,13 +65,14 @@ def test(cfg):
 
     model_module = YoloV1Detector.load_from_checkpoint(
         # checkpoint_path='./saved/yolov1_voc/version_0/checkpoints/epoch=804-step=177099.ckpt',
-        checkpoint_path='./saved/yolov1_voc/version_2/checkpoints/epoch=819-step=180399.ckpt',
+        # checkpoint_path='./saved/yolov1_voc/version_2/checkpoints/epoch=819-step=180399.ckpt',
+        checkpoint_path='./saved/yolov1_voc/version_3/checkpoints/epoch=704-step=155099.ckpt',
         model=model,
         cfg=cfg
     )
     model_module.eval()
 
-    yolov1_decoder = DecodeYoloV1(cfg['num_classes'], cfg['num_boxes'])
+    yolov1_decoder = DecodeYoloV1(cfg['num_classes'], cfg['num_boxes'], conf_threshold=0.6)
 
     # Inference
     for sample in data_loader:
