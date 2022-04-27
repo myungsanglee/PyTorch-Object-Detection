@@ -1,6 +1,7 @@
 from distutils.errors import LibError
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+import os
+sys.path.append(os.getcwd())
 
 import torch
 from torch import nn
@@ -37,21 +38,33 @@ class YoloV1(nn.Module):
         # )
         
         # version_1
+        # self.yolov1_head = nn.Sequential(
+        #     nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
+        #     nn.BatchNorm2d(1024),
+        #     nn.ReLU(),
+            
+        #     nn.Conv2d(1024, 1024, 3, 2, 1),
+        #     nn.BatchNorm2d(1024),
+        #     nn.ReLU(),
+            
+        #     nn.Conv2d(1024, 256, 3, 1, 1),
+        #     nn.ReLU(),
+            
+        #     nn.Flatten(),
+
+        #     nn.Dropout(0.5),
+        #     nn.Linear(256*4*4, 7*7*(self.num_classes + (5*self.num_boxes)))
+        # )
+
+        # version_2
         self.yolov1_head = nn.Sequential(
             nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
             nn.BatchNorm2d(1024),
             nn.ReLU(),
             
-            nn.Conv2d(1024, 1024, 3, 2, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU(),
-            
-            nn.Flatten(),
-            
-            nn.Linear(1024*4*4, 4096),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(4096, 7*7*(self.num_classes + (5*self.num_boxes)))
+            nn.AdaptiveAvgPool2d(1),
+
+            nn.Conv2d(1024, 7*7*(self.num_classes + (5*self.num_boxes)), 1, 1)
         )
         
         weight_initialize(self.yolov1_head)
@@ -80,15 +93,19 @@ if __name__ == '__main__':
     # torchsummary.summary(backbone, (3, 448, 448), batch_size=1, device='cpu')
     # set_parameter_requires_grad(backbone, True)
 
+    input_size = 448
+
     backbone = get_model('darknet19')
 
-    print(backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).size())
+    print(backbone(torch.randn((1, 3, input_size, input_size), dtype=torch.float32)).size())
 
     model = YoloV1(
         backbone=backbone,
-        backbone_out_channels=backbone(torch.randn((1, 3, 448, 448), dtype=torch.float32)).size()[1],
+        backbone_out_channels=backbone(torch.randn((1, 3, input_size, input_size), dtype=torch.float32)).size()[1],
         num_classes=3,
         num_boxes=2
     )
 
-    torchsummary.summary(model, (3, 448, 448), batch_size=1, device='cpu')
+    torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
+
+    print(model(torch.randn(1, 3, input_size, input_size)).size())

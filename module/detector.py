@@ -54,7 +54,7 @@ class YoloV1Detector(pl.LightningModule):
                 optim,
                 **cfg['scheduler_options']
             )
-            print(f'\n\n scheduler \n\n')
+    
             return {
                 "optimizer": optim,
                 "lr_scheduler": {
@@ -63,5 +63,4 @@ class YoloV1Detector(pl.LightningModule):
             } 
         
         except KeyError:
-            print(f'\n\n No scheduler \n\n')
             return optim
