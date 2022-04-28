@@ -1,70 +1,50 @@
-from distutils.errors import LibError
 import sys
 import os
+import math
 sys.path.append(os.getcwd())
 
 import torch
 from torch import nn
 import torchsummary
-import torchvision.models as models
 
 from models.initialize import weight_initialize
 from utils.module_select import get_model
 
 
 class YoloV1(nn.Module):
-    def __init__(self, backbone, backbone_out_channels, num_classes, num_boxes):
+    def __init__(self, backbone, num_classes, num_boxes, in_channels, input_size):
         super().__init__()
 
-        self.backbone = backbone
+        self.backbone = backbone(in_channels).features
+        _, c, h, w = self.backbone(torch.randn((1, 3, input_size, input_size), dtype=torch.float32)).size()
         self.num_classes = num_classes
         self.num_boxes = num_boxes
-        
-        # version_0
-        # self.yolov1_head = nn.Sequential(
-        #     nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
-        #     nn.BatchNorm2d(1024),
-        #     nn.ReLU(),
-            
-        #     nn.Conv2d(1024, 1024, 3, 2, 1),
-        #     nn.BatchNorm2d(1024),
-        #     nn.ReLU(),
-            
-        #     nn.Flatten(),
-            
-        #     nn.Linear(1024*4*4, 496),
-        #     nn.ReLU(),
-        #     nn.Linear(496, 7*7*(self.num_classes + (5*self.num_boxes)))
-        # )
-        
-        # version_1
-        # self.yolov1_head = nn.Sequential(
-        #     nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
-        #     nn.BatchNorm2d(1024),
-        #     nn.ReLU(),
-            
-        #     nn.Conv2d(1024, 1024, 3, 2, 1),
-        #     nn.BatchNorm2d(1024),
-        #     nn.ReLU(),
-            
-        #     nn.Conv2d(1024, 256, 3, 1, 1),
-        #     nn.ReLU(),
-            
-        #     nn.Flatten(),
 
-        #     nn.Dropout(0.5),
-        #     nn.Linear(256*4*4, 7*7*(self.num_classes + (5*self.num_boxes)))
-        # )
-
-        # version_2
         self.yolov1_head = nn.Sequential(
-            nn.Conv2d(backbone_out_channels, 1024, 3, 2, 1),
+            nn.Conv2d(c, 1024, 3, 1, 1),
             nn.BatchNorm2d(1024),
             nn.ReLU(),
             
-            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(1024, 1024, 3, 2, 1),
+            nn.BatchNorm2d(1024),
+            nn.ReLU(),
 
-            nn.Conv2d(1024, 7*7*(self.num_classes + (5*self.num_boxes)), 1, 1)
+            nn.Conv2d(1024, 1024, 3, 1, 1),
+            nn.BatchNorm2d(1024),
+            nn.ReLU(),
+
+            nn.Conv2d(1024, 1024, 3, 1, 1),
+            nn.BatchNorm2d(1024),
+            nn.ReLU(),
+            
+            nn.Conv2d(1024, 256, 3, 1, 1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            
+            nn.Flatten(),
+
+            nn.Dropout(0.5),
+            nn.Linear(256*math.ceil(h/2)*math.ceil(w/2), 7*7*(self.num_classes + (5*self.num_boxes)))
         )
         
         weight_initialize(self.yolov1_head)
@@ -79,31 +59,18 @@ class YoloV1(nn.Module):
         return predictions.view(-1, 7, 7, (self.num_classes + (5*self.num_boxes)))
 
 
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
-
-
 if __name__ == '__main__':
-    # vgg16 = models.vgg16(pretrained=True)
-
-    # # backbone = nn.Sequential(*list(backbone.features.children()))
-    # backbone = vgg16.features
-    # torchsummary.summary(backbone, (3, 448, 448), batch_size=1, device='cpu')
-    # set_parameter_requires_grad(backbone, True)
-
     input_size = 448
+    in_channels = 3
 
     backbone = get_model('darknet19')
 
-    print(backbone(torch.randn((1, 3, input_size, input_size), dtype=torch.float32)).size())
-
     model = YoloV1(
         backbone=backbone,
-        backbone_out_channels=backbone(torch.randn((1, 3, input_size, input_size), dtype=torch.float32)).size()[1],
-        num_classes=3,
-        num_boxes=2
+        num_classes=20,
+        num_boxes=2,
+        in_channels=in_channels,
+        input_size=input_size
     )
 
     torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')

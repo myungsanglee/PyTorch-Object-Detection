@@ -8,9 +8,9 @@ from models.backbone.darknet import darknet19
 
 def get_model(model_name):
     model_dict = {
-        'vgg16': vgg16(3).features,
-        'vgg16_bn': vgg16_bn(3).features,
-        'darknet19': darknet19(3).features
+        'vgg16': vgg16,
+        'vgg16_bn': vgg16_bn,
+        'darknet19': darknet19
     }
     return model_dict.get(model_name)
 

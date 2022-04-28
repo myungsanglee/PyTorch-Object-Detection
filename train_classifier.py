@@ -12,7 +12,7 @@ from dataset.classfication import tiny_imagenet
 from module.classifier import Classifier
 from utils.module_select import get_model
 from utils.utility import make_model_name
-from utils.yaml_helper import get_train_configs
+from utils.yaml_helper import get_configs
 import platform
 
 
@@ -72,6 +72,6 @@ if __name__ == '__main__':
                         help='Train config file')
 
     args = parser.parse_args()
-    cfg = get_train_configs(args.cfg)
+    cfg = get_configs(args.cfg)
 
     train(cfg)

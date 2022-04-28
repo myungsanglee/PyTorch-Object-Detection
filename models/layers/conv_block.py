@@ -31,7 +31,7 @@ class Conv2dBnAct(nn.Module):
         if non_linearity is None:
             non_linearity = nn.ReLU
         self.act = non_linearity()
-
+ 
     def forward(self, x):
         y = self.conv(x)
         y = self.bn(y)

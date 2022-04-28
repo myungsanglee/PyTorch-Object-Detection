@@ -5,31 +5,22 @@ import os
 import albumentations
 import albumentations.pytorch
 import torch
-from torch import nn
-import torchvision.models as models
 from torch.utils.data import DataLoader
 import numpy as np
 import cv2
 
-from utils.yaml_helper import get_train_configs
-from module.detector import YoloV1Detector
+from utils.yaml_helper import get_configs
+from module.yolov1_detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
 from dataset.detection.utils import get_tagged_img, DecodeYoloV1
-from dataset.detection.yolo_dataset import YoloV1Dataset
+from dataset.detection.yolov1_dataset import YoloV1Dataset
 from utils.module_select import get_model
 
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]= "1"
 
-
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
-            
-            
 def test(cfg):
-    # Prepare data
+    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
+
     input_size = cfg['input_size']
     
     test_transform = albumentations.Compose([
@@ -49,24 +40,21 @@ def test(cfg):
         shuffle=False
     )
 
-    # Load trained model
-    # vgg16 = models.vgg16(pretrained=True)
     backbone = get_model(cfg['backbone'])
     
     model = YoloV1(
         backbone=backbone,
-        backbone_out_channels=backbone(torch.randn((1, 3, cfg['input_size'], cfg['input_size']), dtype=torch.float32)).size()[1],
         num_classes=cfg['num_classes'],
-        num_boxes=cfg['num_boxes']
+        num_boxes=cfg['num_boxes'],
+        in_channels=cfg['in_channels'],
+        input_size=cfg['input_size']
     )
     
     if torch.cuda.is_available:
         model = model.to('cuda')
 
     model_module = YoloV1Detector.load_from_checkpoint(
-        # checkpoint_path='./saved/yolov1_voc/version_0/checkpoints/epoch=804-step=177099.ckpt',
-        # checkpoint_path='./saved/yolov1_voc/version_2/checkpoints/epoch=819-step=180399.ckpt',
-        checkpoint_path='./saved/yolov1_voc/version_3/checkpoints/epoch=704-step=155099.ckpt',
+        checkpoint_path='./saved/yolov1_voc/version_0/checkpoints/last.ckpt',
         model=model,
         cfg=cfg
     )
@@ -76,7 +64,6 @@ def test(cfg):
 
     # Inference
     for sample in data_loader:
-        
         for _ in range(10):
             batch_x = sample['image']
             batch_y = sample['label']
@@ -110,8 +97,8 @@ def test(cfg):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', required=True, type=str, help='Train config file')
+    parser.add_argument('--cfg', required=True, type=str, help='config file')
     args = parser.parse_args()
-    cfg = get_train_configs(args.cfg)
+    cfg = get_configs(args.cfg)
 
     test(cfg)

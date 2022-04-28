@@ -1,5 +1,3 @@
-import time
-
 import torch
 from torch import nn
 import numpy as np
@@ -475,7 +473,7 @@ if __name__ == '__main__':
     # torch tensor
     bboxes_tensor = non_max_suppression(decode_pred_tensor[0])
     print(bboxes_tensor) 
-    
+        
     print(f'-'*100)
     
     a = torch.FloatTensor([[0, 0, 0.5, 0.5]])

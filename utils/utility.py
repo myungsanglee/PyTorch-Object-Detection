@@ -1,5 +1,3 @@
-import torch
-import numpy as np
 
 
 def make_divisible(v, divisor=8, min_value=None):
@@ -23,4 +21,4 @@ def set_parameter_requires_grad(model, feature_extracting):
             
 
 if __name__ == '__main__':
-    print(f'{make_divisible(32)}')
+    print(f'{make_divisible(16)}')
