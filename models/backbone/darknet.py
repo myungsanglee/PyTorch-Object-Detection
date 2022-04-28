@@ -1,7 +1,7 @@
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+import os
+sys.path.append(os.getcwd())
 
-import torch
 from torch import nn
 import torchsummary
 
@@ -10,11 +10,10 @@ from models.initialize import weight_initialize
 
 
 class _Darknet19(nn.Module):
-    def __init__(self, in_channels, num_classes, include_top=True):
+    def __init__(self, in_channels, num_classes):
         super(_Darknet19, self).__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.include_top = include_top
 
         self.features = nn.Sequential(
             Conv2dBnRelu(in_channels, 32, 3),
@@ -55,20 +54,14 @@ class _Darknet19(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        
-        if self.include_top:
-            pred = self.classifier(x)
-            b, c, _, _ = pred.size()
-            pred = pred.view(b, c)
+        pred = self.classifier(x)
+        b, c, _, _ = pred.size()
+        pred = pred.view(b, c)
 
-            return {'pred': pred}
+        return {'pred': pred}
 
-        else:
-            return x
-
-
-def darknet19(in_channels, num_classes=1000, include_top=True):
-    model = _Darknet19(in_channels, num_classes, include_top)
+def darknet19(in_channels, num_classes=1000):
+    model = _Darknet19(in_channels, num_classes)
     weight_initialize(model)
     return model
 
@@ -76,7 +69,7 @@ def darknet19(in_channels, num_classes=1000, include_top=True):
 if __name__ == '__main__':
     input_size = 416
     
-    model = darknet19(in_channels=3, num_classes=200, include_top=True)
+    model = darknet19(in_channels=3, num_classes=200)
     
     torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
     

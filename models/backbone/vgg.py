@@ -1,7 +1,8 @@
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+import os
+sys.path.append(os.getcwd())
 
-from models.layers.conv_block import Conv2dBn, Conv2dBnRelu
+from models.layers.conv_block import Conv2dBnRelu
 from models.initialize import weight_initialize
 from torch import nn
 import torchsummary
@@ -19,10 +20,10 @@ class _VGG(nn.Module):
         super(_VGG, self).__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
-        self.stage_channels = []
 
         self.features = self._make_layers(cfg, batch_norm)
-        self.classification = nn.Sequential(
+
+        self.classifier = nn.Sequential(
             Conv2dBnRelu(512, 1280, 1),
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(1280, num_classes, 1)
@@ -30,7 +31,7 @@ class _VGG(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        pred = self.classification(x)
+        pred = self.classifier(x)
         b, c, _, _ = pred.size()
         pred = pred.view(b, c)
 
@@ -51,12 +52,10 @@ class _VGG(nn.Module):
                 in_channels = v
         return nn.Sequential(*layers)
 
-
 def vgg16(in_channels, num_classes=1000):
     model = _VGG(in_channels, num_classes, cfgs['D'], False)
     weight_initialize(model)
     return model
-
 
 def vgg16_bn(in_channels, num_classes=1000):
     model = _VGG(in_channels, num_classes, cfgs['D'], True)
@@ -65,11 +64,11 @@ def vgg16_bn(in_channels, num_classes=1000):
 
 
 if __name__ == '__main__':
-    model = vgg16_bn(in_channels=3, num_classes=200)
+    model = vgg16_bn(in_channels=3)
     # print(model(torch.rand(1, 3, 64, 64)))
     print(model)
     torchsummary.summary(model, (3, 448, 448), batch_size=1, device='cpu')
-    
+
     # print(list(model.children()))
     # print(f'\n-------------------------------------------------------------\n')
     # new_model = nn.Sequential(*list(model.children())[:-1])
@@ -85,4 +84,3 @@ if __name__ == '__main__':
     #                 break
 
     # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
-    from torchvision.models import mobilenet_v2

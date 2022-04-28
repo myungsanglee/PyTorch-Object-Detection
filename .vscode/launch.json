@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["--cfg", "configs/yolov1-adam.yaml"],
+            "args": ["--cfg", "configs/yolov1-voc.yaml"],
             "console": "integratedTerminal"
         }
     ]

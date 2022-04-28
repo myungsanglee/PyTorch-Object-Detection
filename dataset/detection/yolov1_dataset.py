@@ -1,5 +1,6 @@
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+import os
+sys.path.append(os.getcwd())
 
 from torch.utils.data import Dataset, DataLoader
 import cv2
@@ -140,6 +141,9 @@ class YoloV1DataModule(pl.LightningDataModule):
 
 
 if __name__ == '__main__':
+    num_classes = 3
+    num_boxes = 2
+
     train_transforms = albumentations.Compose([
         # albumentations.HorizontalFlip(),
         # albumentations.ColorJitter(
@@ -153,12 +157,16 @@ if __name__ == '__main__':
         albumentations.Normalize(0, 1),
         albumentations.pytorch.ToTensorV2(),
     ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
-    num_classes = 3
-    num_boxes = 2
-    
-    loader = DataLoader(YoloV1Dataset(train_transforms, 'C:/my_github/PyTorch-Object-Detection/data/train.txt', num_classes, num_boxes),
+
+    loader = DataLoader(YoloV1Dataset(
+                            train_transforms, 
+                            os.path.join(os.getcwd(), 'data/train.txt'), 
+                            num_classes, 
+                            num_boxes
+                        ),
                         batch_size=1, 
-                        shuffle=False)
+                        shuffle=False
+    )
 
     flag = False
     while True:
@@ -172,7 +180,7 @@ if __name__ == '__main__':
             label = sample['label'].numpy()
             boxes = non_max_suppression_numpy(decode_predictions_numpy(label, num_classes, num_boxes)[0])
             
-            img = get_tagged_img(img, boxes, './data/test.names', (0, 255, 0))
+            img = get_tagged_img(img, boxes, os.path.join(os.getcwd(), 'data/test.names'), (0, 255, 0))
             
             cv2.imshow('test', img)
             key = cv2.waitKey(0)

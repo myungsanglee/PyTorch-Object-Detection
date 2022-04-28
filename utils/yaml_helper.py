@@ -24,14 +24,14 @@ def load_yaml_file(file):
         return yaml.load(f, Loader=loader)
 
 
-def get_train_configs(file):
+def get_configs(file):
     configs = load_yaml_file(file)
 
     return configs
 
 
 if __name__ == "__main__":
-    cfg = get_train_configs("configs/yolov1-adam.yaml")
+    cfg = get_configs("configs/yolov1-adam.yaml")
     print(cfg)
     print(cfg['optimizer_options']['lr'])
     try: 
@@ -41,5 +41,4 @@ if __name__ == "__main__":
     
     print(type(cfg['scheduler_options']['gamma']))
     print(cfg['scheduler_options']['gamma'])
-    
     

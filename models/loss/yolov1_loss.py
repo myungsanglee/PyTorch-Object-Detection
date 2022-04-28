@@ -1,5 +1,6 @@
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+import os
+sys.path.append(os.getcwd())
 
 import torch
 from torch import nn
@@ -15,8 +16,7 @@ class YoloV1Loss(nn.Module):
       num_classes: Number of classes in the dataset
       num_boxes: Number of boxes to predict
     """
-    
-    def __init__(self, num_classes=20, num_boxes=2):
+    def __init__(self, num_classes, num_boxes=2):
         super().__init__()
         self.num_classes = num_classes
         self.num_boxes = num_boxes
@@ -25,8 +25,6 @@ class YoloV1Loss(nn.Module):
         # pay loss for no object (noobj) and the box coordinates (coord)
         self.lambda_noobj = 0.5
         self.lambda_coord = 5
-        
-        self.batch_size = 0
 
     def forward(self, y_true, y_pred):
         """
@@ -34,9 +32,6 @@ class YoloV1Loss(nn.Module):
             y_true (tensor): [batch, grid, grid, num_classes+(5*num_boxes)]
             y_pred (tensor): [batch, grid, grid, num_classes+(5*num_boxes)]
         """
-        
-        self.batch_size = y_true.shape[0]
-        
         # Calculate IoU for the prediction boxes with true boxes
         ious = []
         for idx in torch.arange(self.num_boxes):
@@ -106,7 +101,6 @@ class YoloV1Loss(nn.Module):
         no_object_loss = noobj * torch.square(0 - pred_conf)  # (batch, S, S, 1)
         no_object_loss = torch.sum(no_object_loss)  # scalar value
         # print(f"no_object_loss: {no_object_loss}")
-
 
         # ================== #
         #   FOR CLASS LOSS   #

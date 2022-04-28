@@ -1,5 +1,6 @@
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+import os
+sys.path.append(os.getcwd())
 
 from collections import Counter
 
