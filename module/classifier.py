@@ -1,29 +1,30 @@
-from module.lr_scheduler import CosineAnnealingWarmUpRestarts
 import pytorch_lightning as pl
 import torch.nn.functional as F
-import torch
-
 from torchmetrics import Accuracy
 
-from utils.module_select import get_optimizer
+from utils.module_select import get_optimizer, get_scheduler
 
 
 class Classifier(pl.LightningModule):
-    def __init__(self, model, cfg, epoch_length=None):
+    def __init__(self, model, cfg):
         super().__init__()
         self.model = model
         self.save_hyperparameters(ignore='model')
         self.top_1 = Accuracy(top_k=1)
         self.top_5 = Accuracy(top_k=5)
 
+    def forward(self, x):
+        predictions = self.model(x)['pred']
+        return predictions
+
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_pred = self.model(x)['pred']
         loss = F.cross_entropy(y_pred, y)
 
-        self.log('train_loss', loss, prog_bar=True, logger=True, on_epoch=True)
-        self.log('train_top1', self.top_1(y_pred, y), logger=True, on_epoch=True)
-        self.log('train_top5', self.top_5(y_pred, y), logger=True, on_epoch=True)
+        self.log('train_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
+        self.log('train_top1', self.top_1(y_pred, y), logger=True, on_epoch=True, on_step=False)
+        self.log('train_top5', self.top_5(y_pred, y), logger=True, on_epoch=True, on_step=False)
 
         return loss
 
@@ -32,15 +33,31 @@ class Classifier(pl.LightningModule):
         y_pred = self.model(x)['pred']
         loss = F.cross_entropy(y_pred, y)
         
-        self.log('val_loss', loss, logger=True, on_epoch=True)
-        self.log('val_top1', self.top_1(y_pred, y), logger=True, on_epoch=True)
-        self.log('val_top5', self.top_5(y_pred, y), logger=True, on_epoch=True)
+        self.log('val_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
+        self.log('val_top1', self.top_1(y_pred, y), logger=True, on_epoch=True, on_step=False)
+        self.log('val_top5', self.top_5(y_pred, y), logger=True, on_epoch=True, on_step=False)
     
     def configure_optimizers(self):
         cfg = self.hparams.cfg
-        epoch_length = self.hparams.epoch_length
-        optim = get_optimizer(cfg['optimizer'],
-            params=self.model.parameters(),
-            **cfg['optimizer_options'])
-
-        return optim
+        optim = get_optimizer(
+            cfg['optimizer'],
+            self.model.parameters(),
+            **cfg['optimizer_options']
+        )
+        
+        try:
+            scheduler = get_scheduler(
+                cfg['scheduler'],
+                optim,
+                **cfg['scheduler_options']
+            )
+    
+            return {
+                "optimizer": optim,
+                "lr_scheduler": {
+                    "scheduler": scheduler
+                }
+            } 
+        
+        except KeyError:
+            return optim
