@@ -1,18 +1,14 @@
-model : 'yolov1'
-backbone: 'darknet19'
-dataset_name : 'test'
-input_size: 448
+model : 'darknet19'
+dataset_name : 'tiny-imagenet'
+input_size: 224
 in_channels: 3
-num_classes : 3
-num_boxes : 2
+num_classes : 200
 
 epochs: 1000
 
-train_list : './data/train.txt'
-val_list : './data/val.txt'
-names : './data/test.names'
-workers: 1 # number of workers to generate data
-batch_size: 1
+data_path : '/home/fssv2/myungsang/datasets/tiny_imagenet/tiny-imagenet-200/'
+workers: 32 # number of workers to generate data
+batch_size: 64
 
 save_dir : './saved' # dir for saving log, weights
 save_freq: 5
@@ -26,7 +22,7 @@ trainer_options:
 #     - 'SWA'
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'adam'
 optimizer_options:
@@ -47,7 +43,7 @@ optimizer_options:
 
 # scheduler: 'multi_step'
 # scheduler_options:
-#   milestones: [800, 900]
+#   milestones: [700, 900]
 #   gamma: 0.1
 
 # scheduler: 'cosine_annealing_warm_restarts'
@@ -60,6 +56,6 @@ optimizer_options:
 # scheduler_options:
 #   T_0: 50
 #   T_mult: 2
-#   eta_max: 1e-3
-#   T_up: 4
-#   gamma: 0.9
+#   eta_max: 1e-1
+#   T_up: 5
+#   gamma: 0.8

@@ -1,8 +1,11 @@
 import os
-from torch.utils.data import Dataset, DataLoader
-import cv2
 import glob
+
+from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
+import albumentations
+import albumentations.pytorch
+import cv2
 
 
 class TinyImageNetDataset(Dataset):
@@ -44,29 +47,63 @@ class TinyImageNetDataset(Dataset):
 
 
 class TinyImageNet(pl.LightningDataModule):
-    def __init__(self, path, workers, train_transforms, val_transforms,
-                 batch_size=None):
+    def __init__(self, path, workers, batch_size):
         super().__init__()
         self.path = path
-        self.train_transforms = train_transforms
-        self.val_transforms = val_transforms
-        self.batch_size = batch_size
         self.workers = workers
+        self.batch_size = batch_size
+        
+    def setup(self, stage=None):
+        train_transforms = albumentations.Compose([
+            albumentations.HorizontalFlip(p=0.5),
+            albumentations.VerticalFlip(p=0.5),
+            albumentations.Rotate(),
+            albumentations.Posterize(),
+            albumentations.RandomGamma(),
+            albumentations.Solarize(),
+            albumentations.Equalize(),
+            albumentations.HueSaturationValue(),
+            albumentations.RandomBrightnessContrast(),
+            albumentations.ColorJitter(),
+            albumentations.Affine(),
+            albumentations.CropAndPad(percent=-0.1),
+            albumentations.Normalize(0, 1),
+            albumentations.pytorch.ToTensorV2(),
+        ],)
+
+        valid_transform = albumentations.Compose([
+            albumentations.Normalize(0, 1),
+            albumentations.pytorch.ToTensorV2(),
+        ],)
+
+        self.train_dataset = TinyImageNetDataset(
+            self.path,
+            train_transforms,
+            True
+        )
+
+        self.valid_dataset = TinyImageNetDataset(
+            self.path,
+            valid_transform,
+            False
+        )
 
     def train_dataloader(self):
-        return DataLoader(TinyImageNetDataset(self.path,
-                                              transforms=self.train_transforms,
-                                              is_train=True),
-                          batch_size=self.batch_size,
-                          num_workers=self.workers,
-                          persistent_workers=self.workers > 0,
-                          pin_memory=self.workers > 0)
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            num_workers=self.workers,
+            persistent_workers=self.workers > 0,
+            pin_memory=self.workers > 0
+        )
 
     def val_dataloader(self):
-        return DataLoader(TinyImageNetDataset(self.path,
-                                              transforms=self.val_transforms,
-                                              is_train=False),
-                          batch_size=self.batch_size,
-                          num_workers=self.workers,
-                          persistent_workers=self.workers > 0,
-                          pin_memory=self.workers > 0)
+        return DataLoader(
+            self.valid_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.workers,
+            persistent_workers=self.workers > 0,
+            pin_memory=self.workers > 0
+        )

@@ -1,20 +1,18 @@
 import argparse
 import platform
-import os
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
 from pytorch_lightning.plugins import DDPPlugin
-import torch
 import torchsummary
 
 from dataset.detection.yolov1_dataset import YoloV1DataModule
-from utils.yaml_helper import get_configs
 from module.yolov1_detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
 from utils.utility import make_model_name
 from utils.module_select import get_model
+from utils.yaml_helper import get_configs
 
 
 def add_experimental_callbacks(cfg, train_callbacks):
@@ -28,12 +26,6 @@ def add_experimental_callbacks(cfg, train_callbacks):
             train_callbacks.append(options[option])
 
     return train_callbacks
-
-
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
 
 
 def train(cfg):
