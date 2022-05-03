@@ -8,6 +8,7 @@ from pytorch_lightning.plugins import DDPPlugin
 import torchsummary
 
 from dataset.classfication.tiny_imagenet import TinyImageNet
+from dataset.classfication.test_augmix import AugMix
 from module.classifier import Classifier
 from utils.utility import make_model_name
 from utils.module_select import get_model
@@ -28,13 +29,22 @@ def add_experimental_callbacks(cfg, train_callbacks):
 
 
 def train(cfg):
-    data_module = TinyImageNet(
+    # data_module = TinyImageNet(
+    #     path=cfg['data_path'],
+    #     workers=cfg['workers'],
+    #     batch_size=cfg['batch_size']
+    # )
+
+    data_module = AugMix(
         path=cfg['data_path'],
         workers=cfg['workers'],
         batch_size=cfg['batch_size']
     )
 
-    model = get_model(cfg['model'])(in_channels=cfg['in_channels'], num_classes=cfg['num_classes'])
+    if cfg['model'] == 'resnet18':
+        model = get_model(cfg['model'])(num_classes=cfg['num_classes'])
+    else:
+        model = get_model(cfg['model'])(in_channels=cfg['in_channels'], num_classes=cfg['num_classes'])
     
     torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
     

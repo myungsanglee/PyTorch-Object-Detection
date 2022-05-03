@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.append(os.getcwd())
 
+import torch
 from torch import nn
 import torchsummary
 
@@ -46,19 +47,25 @@ class _Darknet19(nn.Module):
             Conv2dBnRelu(512, 1024, 3)
         )
         
+        # self.classifier = nn.Sequential(
+        #     Conv2dBnRelu(1024, 1280, 1),
+        #     nn.AdaptiveAvgPool2d(1),
+        #     nn.Conv2d(1280, num_classes, 1)
+        # )
+
         self.classifier = nn.Sequential(
-            Conv2dBnRelu(1024, 1280, 1),
+            Conv2dBnRelu(1024, num_classes, 1),
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(1280, num_classes, 1)
+            nn.Flatten()
         )
 
     def forward(self, x):
         x = self.features(x)
-        pred = self.classifier(x)
-        b, c, _, _ = pred.size()
-        pred = pred.view(b, c)
+        x = self.classifier(x)
+        return x
+        # b, c, _, _ = x.size()
 
-        return {'pred': pred}
+        # return x.view(b, c)
 
 def darknet19(in_channels, num_classes=1000):
     model = _Darknet19(in_channels, num_classes)
@@ -67,14 +74,14 @@ def darknet19(in_channels, num_classes=1000):
 
 
 if __name__ == '__main__':
-    input_size = 416
+    input_size = 64
     
     model = darknet19(in_channels=3, num_classes=200)
     
     torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
     
-    model = model.features[:17]
-    torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
+    # model = model.features[:17]
+    # torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
     
     # print(list(model.children()))
     # print(f'\n-------------------------------------------------------------\n')
@@ -92,3 +99,11 @@ if __name__ == '__main__':
 
     # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
     
+    # from torchvision import models
+
+    # model = models.resnet18(num_classes=200)
+    # models.vgg16
+    # # model = models.resnet50(num_classes=200)
+    # model = models.efficientnet_b0(num_classes=200)
+    # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
+
