@@ -47,7 +47,7 @@ def test(cfg):
         # model = model.to('cuda')
 
     model_module =Classifier.load_from_checkpoint(
-        checkpoint_path='./saved/darknet19_tiny-imagenet/version_0/checkpoints/last.ckpt',
+        checkpoint_path='./saved/darknet19_tiny-imagenet/version_1/checkpoints/epoch=874-step=1367624.ckpt',
         model=model,
         cfg=cfg
     )

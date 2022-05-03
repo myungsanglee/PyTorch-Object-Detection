@@ -14,23 +14,23 @@ class Classifier(pl.LightningModule):
         self.top_5 = Accuracy(top_k=5)
 
     def forward(self, x):
-        predictions = self.model(x)['pred']
+        predictions = self.model(x)
         return predictions
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        y_pred = self.model(x)['pred']
+        y_pred = self.model(x)
         loss = F.cross_entropy(y_pred, y)
 
         self.log('train_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
-        self.log('train_top1', self.top_1(y_pred, y), logger=True, on_epoch=True, on_step=False)
-        self.log('train_top5', self.top_5(y_pred, y), logger=True, on_epoch=True, on_step=False)
+        # self.log('train_top1', self.top_1(y_pred, y), logger=True, on_epoch=True, on_step=False)
+        # self.log('train_top5', self.top_5(y_pred, y), logger=True, on_epoch=True, on_step=False)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        y_pred = self.model(x)['pred']
+        y_pred = self.model(x)
         loss = F.cross_entropy(y_pred, y)
         
         self.log('val_loss', loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)

@@ -1,4 +1,4 @@
-model : 'darknet19'
+model : 'resnet18'
 dataset_name : 'tiny-imagenet'
 input_size: 64
 in_channels: 3
@@ -22,7 +22,7 @@ trainer_options:
 #     - 'SWA'
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'adam'
 optimizer_options:

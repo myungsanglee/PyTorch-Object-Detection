@@ -1,12 +1,13 @@
 model : 'darknet19'
-dataset_name : 'tiny-imagenet'
-input_size: 64
+dataset_name : 'sex-age-dataset'
+input_size: 224
 in_channels: 3
 num_classes : 200
 
 epochs: 1000
 
-data_path : '/home/fssv2/myungsang/datasets/tiny_imagenet/tiny-imagenet-200/'
+train_list : '/home/fssv2/myungsang/datasets/aihub_human_action/sex_age_dataset/train.txt'
+val_list : '/home/fssv2/myungsang/datasets/aihub_human_action/sex_age_dataset/val.txt'
 workers: 32 # number of workers to generate data
 batch_size: 64
 
@@ -22,7 +23,7 @@ trainer_options:
 #     - 'SWA'
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'adam'
 optimizer_options:

@@ -1,11 +1,16 @@
 import os
+import sys  
 import glob
+sys.path.append(os.getcwd())
 
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 import albumentations
 import albumentations.pytorch
 import cv2
+import numpy as np
+
+from dataset.augmentation import AugMix
 
 
 class TinyImageNetDataset(Dataset):
@@ -54,19 +59,19 @@ class TinyImageNet(pl.LightningDataModule):
         self.batch_size = batch_size
         
     def setup(self, stage=None):
+        augs = [
+            albumentations.HorizontalFlip(always_apply=True),
+            albumentations.Blur(always_apply=True),
+            albumentations.OneOf(
+                [albumentations.ShiftScaleRotate(always_apply=True),
+                albumentations.GaussNoise(always_apply=True)]
+            ),
+            albumentations.Cutout(always_apply=True),
+            albumentations.PiecewiseAffine(always_apply=True)
+        ]
+
         train_transforms = albumentations.Compose([
-            albumentations.HorizontalFlip(p=0.5),
-            albumentations.VerticalFlip(p=0.5),
-            albumentations.Rotate(),
-            albumentations.Posterize(),
-            albumentations.RandomGamma(),
-            albumentations.Solarize(),
-            albumentations.Equalize(),
-            albumentations.HueSaturationValue(),
-            albumentations.RandomBrightnessContrast(),
-            albumentations.ColorJitter(),
-            albumentations.Affine(),
-            albumentations.CropAndPad(percent=-0.1),
+            AugMix(width=3, depth=1, alpha=.2, p=1., augmentations=augs),
             albumentations.Normalize(0, 1),
             albumentations.pytorch.ToTensorV2(),
         ],)
@@ -107,3 +112,50 @@ class TinyImageNet(pl.LightningDataModule):
             persistent_workers=self.workers > 0,
             pin_memory=self.workers > 0
         )
+
+
+if __name__ == '__main__':
+
+    augs = [albumentations.HorizontalFlip(always_apply=True),
+        albumentations.Blur(always_apply=True),
+        albumentations.OneOf(
+        [albumentations.ShiftScaleRotate(always_apply=True),
+        albumentations.GaussNoise(always_apply=True)]
+        ),
+        albumentations.Cutout(always_apply=True),
+        albumentations.PiecewiseAffine(always_apply=True)]
+
+    test_transform = albumentations.Compose([
+        AugMix(width=3, depth=1, alpha=.2, p=1., augmentations=augs),
+        albumentations.Normalize(0, 1),
+        albumentations.pytorch.ToTensorV2(),
+    ],)
+
+    loader = DataLoader(TinyImageNetDataset(
+                            '/home/fssv2/myungsang/datasets/tiny_imagenet/tiny-imagenet-200/',
+                            test_transform,
+                            True
+                        ),
+                        batch_size=1,
+                        shuffle=True
+    )
+
+    label_name_path = '/home/fssv2/myungsang/datasets/tiny_imagenet/tiny-imagenet-200/tiny-imagenet.names'
+    with open(label_name_path, 'r') as f:
+        label_name_list = f.read().splitlines()
+
+    for sample in loader:
+        batch_x, batch_y = sample
+
+        img = batch_x[0].numpy()   
+        img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
+
+        print(batch_x.size())
+        print(f'label: {label_name_list[batch_y[0]]}')
+
+        cv2.imshow('sample', img)
+        key = cv2.waitKey(0)
+        if key == 27:
+            break
+
+    cv2.destroyAllWindows()

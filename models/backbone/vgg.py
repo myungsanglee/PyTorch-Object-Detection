@@ -84,3 +84,9 @@ if __name__ == '__main__':
     #                 break
 
     # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
+
+    from torchvision import models
+
+    model =models.resnet50()
+    model = nn.Sequential(*list(model.children())[:-2])
+    torchsummary.summary(model, (3, 224, 224), batch_size=1, device='cpu')
