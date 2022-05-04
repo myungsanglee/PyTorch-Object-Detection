@@ -46,12 +46,6 @@ class _Darknet19(nn.Module):
             Conv2dBnRelu(1024, 512, 1),
             Conv2dBnRelu(512, 1024, 3)
         )
-        
-        # self.classifier = nn.Sequential(
-        #     Conv2dBnRelu(1024, 1280, 1),
-        #     nn.AdaptiveAvgPool2d(1),
-        #     nn.Conv2d(1280, num_classes, 1)
-        # )
 
         self.classifier = nn.Sequential(
             Conv2dBnRelu(1024, num_classes, 1),
@@ -63,9 +57,7 @@ class _Darknet19(nn.Module):
         x = self.features(x)
         x = self.classifier(x)
         return x
-        # b, c, _, _ = x.size()
 
-        # return x.view(b, c)
 
 def darknet19(in_channels, num_classes=1000):
     model = _Darknet19(in_channels, num_classes)
@@ -75,10 +67,12 @@ def darknet19(in_channels, num_classes=1000):
 
 if __name__ == '__main__':
     input_size = 64
+    in_channels = 3
+    num_classes = 200
     
-    model = darknet19(in_channels=3, num_classes=200)
+    model = darknet19(in_channels, num_classes)
     
-    torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
+    torchsummary.summary(model, (in_channels, input_size, input_size), batch_size=1, device='cpu')
     
     # model = model.features[:17]
     # torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
