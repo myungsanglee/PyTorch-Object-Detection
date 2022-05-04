@@ -2,12 +2,8 @@
 PyTorch 기반 Object Detection 모델 구조 및 학습 기법을 테스트하기 위한 프로젝트
 
 ## Implementations
-* Detector
-  * YOLO v1
-  * YOLO v2
-* Backbone
-  * Darknet19
-  * VGG16
+ * YOLO v1
+ * YOLO v2
 
 ## TODOs
 - [x] ~~YOLO v1~~
@@ -15,7 +11,6 @@ PyTorch 기반 Object Detection 모델 구조 및 학습 기법을 테스트하�
 - [ ] YOLO v3
 - [ ] YOLO v4
 - [ ] RetinaNet
-- [ ] ResNet
 
 ## Requirements
 * `PyTorch >= 1.8.1`
