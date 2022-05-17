@@ -7,7 +7,7 @@ from collections import Counter
 import torch
 import numpy as np
 
-from dataset.detection.utils import non_max_suppression, decode_predictions, intersection_over_union
+from dataset.detection.yolov1_utils import non_max_suppression, decode_predictions, intersection_over_union
 
 
 class MeanAveragePrecision:

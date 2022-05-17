@@ -11,7 +11,7 @@ from models.initialize import weight_initialize
 
 
 class _Darknet19(nn.Module):
-    def __init__(self, in_channels, num_classes):
+    def __init__(self, num_classes, in_channels):
         super(_Darknet19, self).__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
@@ -59,8 +59,8 @@ class _Darknet19(nn.Module):
         return x
 
 
-def darknet19(in_channels, num_classes=1000):
-    model = _Darknet19(in_channels, num_classes)
+def darknet19(num_classes=1000, in_channels=3):
+    model = _Darknet19(num_classes, in_channels)
     weight_initialize(model)
     return model
 

@@ -1,9 +1,9 @@
-from distutils.errors import LibError
+import os
 import sys
-sys.path.append('C:/my_github/PyTorch-Object-Detection')
+sys.path.append(os.getcwd())
 
 import torch
-from torch import nn, sigmoid
+from torch import nn
 import torchsummary
 import torchvision.models as models
 
@@ -52,7 +52,7 @@ def set_parameter_requires_grad(model, feature_extracting):
 if __name__ == '__main__':
     input_size = 416
 
-    backbone = get_model('darknet19')
+    backbone = get_model('darknet19')().features
 
     model = YoloV2(
         backbone=backbone,

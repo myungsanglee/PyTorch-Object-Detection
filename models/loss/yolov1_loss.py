@@ -6,7 +6,7 @@ import torch
 from torch import nn
 import numpy as np
 
-from dataset.detection.utils import intersection_over_union
+from dataset.detection.yolov1_utils import intersection_over_union
 
 
 class YoloV1Loss(nn.Module):
