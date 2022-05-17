@@ -5,7 +5,7 @@ import torch
 from torch import nn
 import numpy as np
 
-from dataset.detection.utils import intersection_over_union
+from dataset.detection.yolov2_utils import intersection_over_union
 
 
 class YoloV2Loss(nn.Module):
@@ -28,8 +28,8 @@ class YoloV2Loss(nn.Module):
         
         self.ignore_threshold = 0.5
         
-        self.mse_loss = nn.MSELoss(size_average=False)
-        self.bce_loss = nn.BCELoss(size_average=False)
+        self.mse_loss = nn.MSELoss(reduction='sum')
+        self.bce_loss = nn.BCELoss(reduction='sum')
 
     def forward(self, input, target):
         """
@@ -52,7 +52,16 @@ class YoloV2Loss(nn.Module):
         pred_cls = torch.sigmoid(prediction[..., 5:])
         
         mask, noobj_mask, tx, ty, tw, th, tconf, tcls = self.encode_target(target, self.num_classes, self.scaled_anchors, layer_w, layer_h, self.ignore_threshold)
-    
+        if prediction.is_cuda:
+            mask = mask.cuda()
+            noobj_mask = noobj_mask.cuda()
+            tx = tx.cuda()
+            ty = ty.cuda()
+            tw = tw.cuda()
+            th = th.cuda()
+            tconf = tconf.cuda()
+            tcls = tcls.cuda()
+
         # ============================ #
         #   FOR BOX COORDINATES Loss   #
         # ============================ #

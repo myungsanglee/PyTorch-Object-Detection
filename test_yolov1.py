@@ -12,7 +12,7 @@ import cv2
 from utils.yaml_helper import get_configs
 from module.yolov1_detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
-from dataset.detection.utils import get_tagged_img, DecodeYoloV1
+from dataset.detection.yolov1_utils import get_tagged_img, DecodeYoloV1
 from dataset.detection.yolov1_dataset import YoloV1Dataset
 from utils.module_select import get_model
 
