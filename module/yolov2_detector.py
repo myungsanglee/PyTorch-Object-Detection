@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 
 from utils.module_select import get_optimizer, get_scheduler
 from models.loss.yolov2_loss import YoloV2Loss
-from utils.metric import MeanAveragePrecision
+from dataset.detection.yolov2_utils import MeanAveragePrecision
 
 
 class YoloV2Detector(pl.LightningModule):
@@ -11,7 +11,7 @@ class YoloV2Detector(pl.LightningModule):
         self.save_hyperparameters(ignore='model')
         self.model = model
         self.loss_fn = YoloV2Loss(cfg['num_classes'], cfg['scaled_anchors'])
-        # self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['num_boxes'])
+        self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'])
 
     def forward(self, x):
         predictions = self.model(x)
@@ -25,8 +25,8 @@ class YoloV2Detector(pl.LightningModule):
 
         return loss
 
-    # def on_validation_epoch_start(self):
-    #     self.map_metric.reset_states()
+    def on_validation_epoch_start(self):
+        self.map_metric.reset_states()
 
     def validation_step(self, batch, batch_idx):
         pred = self.model(batch['img'])
@@ -34,11 +34,11 @@ class YoloV2Detector(pl.LightningModule):
 
         self.log('val_loss', loss, prog_bar=True, logger=True)
 
-        # self.map_metric.update_state(batch['label'], pred)        
-        
-    # def on_validation_epoch_end(self) -> None:
-    #     map = self.map_metric.result()
-    #     self.log('val_mAP', map, prog_bar=True, logger=True, on_epoch=True, on_step=False)
+        self.map_metric.update_state(batch['annot'], pred)        
+
+    def on_validation_epoch_end(self):
+        map = self.map_metric.result()
+        self.log('val_mAP', map, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         cfg = self.hparams.cfg

@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.append(os.getcwd())
 
+import torch
 from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
@@ -9,7 +10,7 @@ import pytorch_lightning as pl
 import albumentations
 import albumentations.pytorch
 
-from dataset.detection.yolov2_utils import collater
+from dataset.detection.yolov2_utils import collater, encode_target, decode_target, get_tagged_img
 
 
 class YoloV2Dataset(Dataset):
@@ -118,30 +119,22 @@ if __name__ == '__main__':
     data_module.prepare_data()
     data_module.setup()
 
-    for batch, sample in enumerate(data_module.train_dataloader()):
-        print(sample['img'].shape)
-        print(sample['annot'].shape)
+    for sample in data_module.train_dataloader():
+        batch_x = sample['img']
+        batch_y = sample['annot']
+        print(batch_x.size())
+        print(batch_y.size())
         
-        img = sample['img'][0].numpy()   
+        img = batch_x[0].numpy()   
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         h, w, _ = img.shape
 
-        labels = sample['annot'][0].numpy() # [max_num_annots, 5(cx, cy, w, h, cid)]
-        for label in labels:
-            if label.sum() <= 0:
-                continue
-            
-            x_min = int((label[0] - (label[2]/2.)) * w)
-            y_min = int((label[1] - (label[3]/2.)) * h)
-            x_max = int((label[0] + (label[2]/2.)) * w)
-            y_max = int((label[1] + (label[3]/2.)) * h)
-
-            img = cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-
-        # boxes = non_max_suppression_numpy(decode_predictions_numpy(label, num_classes, num_boxes)[0])
+        true_pred = encode_target(batch_y, 20, [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]], 416)
+        true_boxes = decode_target(true_pred, 20, [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]], 416)[0]
+        true_boxes = true_boxes[torch.where(true_boxes[..., 4] > 0)[0]]
         
-        # img = get_tagged_img(img, boxes, os.path.join(os.getcwd(), 'data/test.names'), (0, 255, 0))
+        img = get_tagged_img(img, true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
         
         cv2.imshow('test', img)
         key = cv2.waitKey(0)

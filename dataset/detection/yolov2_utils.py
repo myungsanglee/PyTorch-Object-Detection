@@ -1,3 +1,12 @@
+from email.errors import StartBoundaryNotFoundDefect
+import sys
+import os
+
+from matplotlib.pyplot import sca
+sys.path.append(os.getcwd())
+
+from collections import Counter
+
 import torch
 from torch import nn
 import numpy as np
@@ -61,7 +70,7 @@ def intersection_over_union_numpy(boxes1, boxes2):
     inter_xmax = np.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
     inter_ymax = np.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
 
-    inter_area = np.clip((inter_xmax - inter_xmin), 0, 1) * np.clip((inter_ymax - inter_ymin), 0, 1) # (batch, S, S, 1)
+    inter_area = np.clip((inter_xmax - inter_xmin), 0) * np.clip((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
     box1_area = np.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
     box2_area = np.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
 
@@ -94,18 +103,18 @@ def intersection_over_union(boxes1, boxes2):
     inter_xmax = torch.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
     inter_ymax = torch.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
 
-    inter_area = torch.clamp((inter_xmax - inter_xmin), 0, 1) * torch.clamp((inter_ymax - inter_ymin), 0, 1) # (batch, S, S, 1)
+    inter_area = torch.clamp((inter_xmax - inter_xmin), 0) * torch.clamp((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
     box1_area = torch.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
     box2_area = torch.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
 
     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
 
 
-def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
+def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
     """Does Non Max Suppression given boxes
 
     Arguments:
-        boxes (Numpy Array): All boxes with each grid '(S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
+        boxes (Numpy Array): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
         iou_threshold (float): threshold where predicted boxes is correct
         conf_threshold (float): threshold to remove predicted boxes
 
@@ -114,10 +123,10 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
     """
 
     # boxes smaller than the conf_threshold are removed
-    boxes = np.take(boxes, np.where(boxes[..., 1] > conf_threshold)[0], axis=0)
+    boxes = np.take(boxes, np.where(boxes[..., 4] > conf_threshold)[0], axis=0)
 
     # sort descending by confidence score
-    boxes = np.take(boxes, np.argsort(-boxes[..., 1]), axis=0)
+    boxes = np.take(boxes, np.argsort(-boxes[..., 4]), axis=0)
 
     # get boxes after nms
     boxes_after_nms = np.empty(shape=(0, 6))
@@ -127,7 +136,7 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
         tmp_boxes = np.empty(shape=(0, 6))
         for idx in range(1, boxes.shape[0]):
             tmp_box = np.expand_dims(boxes[idx], axis=0)
-            if tmp_box[0][0] != chosen_box[0][0] or intersection_over_union_numpy(chosen_box[..., 2:], tmp_box[..., 2:]) < iou_threshold:
+            if tmp_box[0][-1] != chosen_box[0][-1] or intersection_over_union_numpy(chosen_box[..., :4], tmp_box[..., :4]) < iou_threshold:
                 tmp_boxes = np.append(tmp_boxes, tmp_box, axis=0)
         boxes = tmp_boxes
 
@@ -136,11 +145,11 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.4):
     return boxes_after_nms
 
 
-def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
+def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.5):
     """Does Non Max Suppression given boxes
 
     Arguments:
-        boxes (Tensor): All boxes with each grid '(S*S, 6)', specified as [class_idx, confidence_score, cx, cy, w, h]
+        boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
         iou_threshold (float): threshold where predicted boxes is correct
         conf_threshold (float): threshold to remove predicted boxes
 
@@ -149,15 +158,15 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     """
 
     # boxes smaller than the conf_threshold are removed
-    boxes = boxes[torch.where(boxes[..., 1] > conf_threshold)[0]]
+    boxes = boxes[torch.where(boxes[..., 4] > conf_threshold)[0]]
 
     # sort descending by confidence score
-    boxes = boxes[torch.argsort(-boxes[..., 1])]
+    boxes = boxes[torch.argsort(-boxes[..., 4])]
  
     # get boxes after nms
     boxes_after_nms = []
 
-    if boxes.size()[0] == 0:
+    if boxes.size(0) == 0:
         return boxes
 
     while True:
@@ -165,11 +174,11 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
         boxes_after_nms.append(chosen_box[0])
         
         tmp_boxes = []
-        for idx in range(1, boxes.shape[0]):
+        for idx in range(1, boxes.size(0)):
             tmp_box = boxes[idx:idx+1, ...]
-            if tmp_box[0][0] != chosen_box[0][0]:
+            if tmp_box[0][-1] != chosen_box[0][-1]:
                 tmp_boxes.append(tmp_box[0])
-            elif torch.lt(intersection_over_union(chosen_box[..., 2:], tmp_box[..., 2:]), iou_threshold):
+            elif torch.lt(intersection_over_union(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
                 tmp_boxes.append(tmp_box[0])
                 
         if tmp_boxes:
@@ -192,7 +201,7 @@ def decode_predictions(input, num_classes, scaled_anchors, input_size):
         input_size: input size of Image
 
     Returns:
-        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 5+num_classes)', specified as [cx, cy, w, h, confidence_score, class_idx]
+        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
     """
     batch_size, _, layer_h, layer_w = input.size()
     num_anchors = len(scaled_anchors)
@@ -208,31 +217,237 @@ def decode_predictions(input, num_classes, scaled_anchors, input_size):
     conf = torch.sigmoid(prediction[..., 4])
     pred_cls = torch.sigmoid(prediction[..., 5:])
 
+    pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
+    pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
+
     FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
     LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
     # Calculate offsets for each grid
     grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
-        batch_size * num_anchors, 1, 1).view(x.shape).type(FloatTensor)
+        batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
     grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
-        batch_size * num_anchors, 1, 1).view(y.shape).type(FloatTensor)
+        batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
     # Calculate anchor w, h
     anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
     anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-    anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.shape)
-    anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.shape)
+    anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
+    anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
     # Add offset and scale with anchors
-    pred_boxes = FloatTensor(prediction[..., :4].shape)
+    pred_boxes = FloatTensor(prediction[..., :4].size())
     pred_boxes[..., 0] = x + grid_x
     pred_boxes[..., 1] = y + grid_y
     pred_boxes[..., 2] = torch.exp(w) * anchor_w
     pred_boxes[..., 3] = torch.exp(h) * anchor_h
     # Results
-    _scale = torch.FloatTensor([stride_w, stride_h] * 2)
-    output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale,
-                        conf.view(batch_size, -1, 1), pred_cls.view(batch_size, -1, num_classes)), -1)
+    _scale = FloatTensor([stride_w, stride_h] * 2)
+    output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
     
     return output
+
+
+def encode_target(target, num_classes, scaled_anchors, input_size):
+    """Decode YoloV2 Ground Truth to YoloV2 Predictions shape
+
+    Arguments:
+        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+        num_classes (int): Number of classes in the dataset
+        scaled_anchors (List): Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
+        input_size (int): Input Size of Image
     
+    Retruns:
+        Tensor: encoded target, specified as [batch_size, num_anchors*(5+num_classes), input_size/32, input_size/32]
+    """
+    batch_size = target.size(0)
+    num_anchors = len(scaled_anchors)
+    layer_h = int(input_size / 32)
+    layer_w = int(input_size / 32)
+
+    tx = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+    ty = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+    tw = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+    th = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+    tconf = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+    tcls = torch.zeros(batch_size, num_anchors, layer_h, layer_w, num_classes)
+
+    for b in torch.arange(batch_size):
+        for t in torch.arange(target.size(1)):
+            if target[b, t].sum() <= 0:
+                continue
+            gx = target[b, t, 0] * layer_w
+            gy = target[b, t, 1] * layer_h
+            gw = target[b, t, 2] * layer_w
+            gh = target[b, t, 3] * layer_h
+            gi = int(gx)
+            gj = int(gy)
+
+            gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
+            anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
+
+            calc_iou = intersection_over_union(gt_box, anchors_box) # [num_anchors, 1]
+            calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
+            
+            best_n = torch.argmax(calc_iou)
+            tx[b, best_n, gj, gi] = gx - gi
+            ty[b, best_n, gj, gi] = gy - gj
+            tw[b, best_n, gj, gi] = torch.log(gw/scaled_anchors[best_n][0] + 1e-16)
+            th[b, best_n, gj, gi] = torch.log(gh/scaled_anchors[best_n][1] + 1e-16)
+            tconf[b, best_n, gj, gi] = 1
+            tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
+    
+    output = torch.cat([tx, ty, tw, th, tconf, tcls], -1) # [batch_size, num_anchors, layer_h, layer_w, 5(tx, ty, tw, th, tconf) + num_classes]
+    output = output.permute(0, 1, 4, 2, 3).contiguous().view(batch_size, -1, layer_h, layer_w) # [batch_size, num_anchors*(5(tx, ty, tw, th, tconf) + num_classes), layer_h, layer_w]
+    if target.is_cuda:
+        output = output.cuda()
+    return output  
+
+
+def decode_target(input, num_classes, scaled_anchors, input_size):
+    """decodes encode_target
+    
+    Convert predictions to boundig boxes info
+
+    Arguments:
+        input (Tensor): predictions of the YOLO v2 model with shape  '(batch, num_anchors*(5 + num_classes), 13, 13)'
+        num_classes: Number of classes in the dataset
+        scaled_anchors: Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
+        input_size: input size of Image
+
+    Returns:
+        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+    """
+    batch_size, _, layer_h, layer_w = input.size()
+    num_anchors = len(scaled_anchors)
+    stride_h = input_size / layer_h
+    stride_w = input_size / layer_w
+    # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
+    prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
+
+    x = prediction[..., 0]
+    y = prediction[..., 1]
+    w = prediction[..., 2]
+    h = prediction[..., 3]
+    conf = prediction[..., 4]
+    pred_cls = prediction[..., 5:]
+
+    pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
+    pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
+
+    FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
+    LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
+    # Calculate offsets for each grid
+    grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
+        batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
+    grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
+        batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
+    # Calculate anchor w, h
+    anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
+    anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
+    anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
+    anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
+    # Add offset and scale with anchors
+    pred_boxes = FloatTensor(prediction[..., :4].size())
+    pred_boxes[..., 0] = x + grid_x
+    pred_boxes[..., 1] = y + grid_y
+    pred_boxes[..., 2] = torch.exp(w) * anchor_w
+    pred_boxes[..., 3] = torch.exp(h) * anchor_h
+    # Results
+    _scale = FloatTensor([stride_w, stride_h] * 2)
+    output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
+    
+    return output
+
+    
+def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.5):
+    """Calculates mean average precision
+
+    Arguments:
+        true_boxes (Tensor): Tensor of all boxes with all images (None, 7), specified as [img_idx, cx, cy, w, h, confidence_score, class_idx]
+        pred_boxes (Tensor): Similar as true_bboxes
+        num_classes (int): number of classes
+        iou_threshold (float): threshold where predicted boxes is correct
+
+    Returns:
+        Float: mAP value across all classes given a specific IoU threshold
+    """
+
+    # list storing all AP for respective classes
+    average_precisions = []
+
+    # used for numerical stability later on
+    epsilon = 1e-6
+
+    for c in torch.arange(num_classes, dtype=torch.float32):
+        # print('\nCalculating AP: ', int(c), ' / ', num_classes)
+
+        # detections, ground_truths variables in specific class
+        detections = pred_boxes[torch.where(pred_boxes[..., -1] == c)[0]]
+        ground_truths = true_boxes[torch.where(true_boxes[..., -1] == c)[0]]
+
+        # If none exists for this class then we can safely skip
+        total_true_boxes = len(ground_truths)
+        if total_true_boxes == 0:
+            average_precisions.append(torch.tensor(0))
+            continue
+
+        # print(c, ' class ground truths size: ', ground_truths.size()[0])
+        # print(c, ' class detections size: ', detections.size()[0])
+
+        # find the amount of bboxes for each training example
+        # Counter here finds how many ground truth bboxes we get
+        # for each training example, so let's say img 0 has 3,
+        # img 1 has 5 then we will obtain a dictionary with:
+        # amount_bboxes = {0:3, 1:5}
+        amount_bboxes = Counter([int(gt[0]) for gt in ground_truths])
+
+        # We then go through each key, val in this dictionary
+        # and convert to the following (w.r.t same example):
+        # ammount_bboxes = {0:torch.tensor[0,0,0], 1:torch.tensor[0,0,0,0,0]}
+        for key, val in amount_bboxes.items():
+            amount_bboxes[key] = torch.zeros(val)
+        
+        # sort by confidence score
+        detections = detections[torch.sort(detections[..., -2], descending=True)[1]]
+        true_positive = torch.zeros((len(detections)))
+        false_positive = torch.zeros((len(detections)))
+
+        for detection_idx, detection in enumerate(detections):
+            # Only take out the ground_truths that have the same
+            # training idx as detection
+            ground_truth_img = ground_truths[torch.where(ground_truths[..., 0] == detection[0])[0]]
+
+            num_gts = len(ground_truth_img)
+            best_iou = 0
+
+            for idx, gt in enumerate(ground_truth_img):
+                iou = intersection_over_union(detection[1:5], gt[1:5])
+
+                if iou > best_iou:
+                    best_iou = iou
+                    best_gt_idx = idx
+
+            if best_iou > iou_threshold:
+                # only detect ground truth detection once
+                if amount_bboxes[int(detection[0])][best_gt_idx] == 0:
+                    # true positive and add this bounding box to seen
+                    true_positive[detection_idx] = 1
+                    amount_bboxes[int(detection[0])][best_gt_idx] = 1
+                else:
+                    false_positive[detection_idx] = 1
+
+            # if IOU is lower then the detection is a false positive
+            else:
+                false_positive[detection_idx] = 1
+
+        tf_cumsum = torch.cumsum(true_positive, dim=0)
+        fp_cumsum = torch.cumsum(false_positive, dim=0)
+        recalls = tf_cumsum / (total_true_boxes + epsilon)
+        precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
+        precisions = torch.cat((torch.tensor([1]), precisions))
+        recalls = torch.cat((torch.tensor([0]), recalls))
+        # torch.trapz for numerical integration
+        average_precisions.append(torch.trapz(precisions, recalls))
+
+    return torch.mean(torch.stack(average_precisions))
 
 
 def get_tagged_img(img, boxes, names_path, color):
@@ -247,23 +462,20 @@ def get_tagged_img(img, boxes, names_path, color):
     Returns:
         Numpy Array: tagged image array
     """
-
-    width = img.shape[1]
-    height = img.shape[0]
     with open(names_path, 'r') as f:
         class_name_list = f.readlines()
     class_name_list = [x.strip() for x in class_name_list]
     for bbox in boxes:
-        class_name = class_name_list[int(bbox[0])]
-        confidence_score = bbox[1]
-        x = bbox[2]
-        y = bbox[3]
-        w = bbox[4]
-        h = bbox[5]
-        xmin = int((x - (w / 2)) * width)
-        ymin = int((y - (h / 2)) * height)
-        xmax = int((x + (w / 2)) * width)
-        ymax = int((y + (h / 2)) * height)
+        class_name = class_name_list[int(bbox[-1])]
+        confidence_score = bbox[4]
+        cx = bbox[0]
+        cy = bbox[1]
+        w = bbox[2]
+        h = bbox[3]
+        xmin = int((cx - (w / 2)))
+        ymin = int((cy - (h / 2)))
+        xmax = int((cx + (w / 2)))
+        ymax = int((cy + (h / 2)))
 
         img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color)
         img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
@@ -274,99 +486,126 @@ def get_tagged_img(img, boxes, names_path, color):
     return img
 
 
-class DecodeYoloV1(nn.Module):
-    '''Decode Yolo V1 Predictions to bunding boxes
+class DecodeYoloV2(nn.Module):
+    '''Decode Yolo V2 Predictions to bunding boxes
     '''
     
-    def __init__(self, num_classes, num_boxes, conf_threshold=0.25):
+    def __init__(self, num_classes, scaled_anchors, input_size, conf_threshold=0.5):
         super().__init__()
         self.num_classes = num_classes
-        self.num_boxes = num_boxes
+        self.scaled_anchors = scaled_anchors
+        self.input_size = input_size
         self.conf_threshold = conf_threshold
         
     def forward(self, x):
-        decode_pred = decode_predictions(x, self.num_classes, self.num_boxes)
+        assert x.size(0) == 1
+        decode_pred = decode_predictions(x, self.num_classes, self.scaled_anchors, self.input_size)
         boxes = non_max_suppression(decode_pred[0], conf_threshold=self.conf_threshold)
         return boxes
 
 
+class MeanAveragePrecision:
+    def __init__(self, num_classes, scaled_anchors, input_size):
+        self._all_true_boxes_variable = 0
+        self._all_pred_boxes_variable = 0
+        self._img_idx = 0
+        self._num_classes = num_classes
+        self._scaled_anchors = scaled_anchors
+        self._input_size = input_size
+
+    def reset_states(self):
+        self._all_true_boxes_variable = 0
+        self._all_pred_boxes_variable = 0
+        self._img_idx = 0
+
+    def update_state(self, y_true, y_pred):
+        y_true = encode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
+        true_boxes = decode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
+        pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
+
+        for idx in torch.arange(y_true.size(0)):
+            pred_nms = non_max_suppression(pred_boxes[idx])
+            pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
+            if pred_nms.is_cuda:
+                pred_img_idx = pred_img_idx.cuda()
+            pred_concat = torch.concat([pred_img_idx, pred_nms], dim=1)
+
+            true_box = true_boxes[idx]
+            true_nms = true_box[torch.where(true_box[..., 4] > 0)[0]]
+            true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self._img_idx
+            if true_nms.is_cuda:
+                true_img_idx = true_img_idx.cuda()
+            true_concat = torch.concat([true_img_idx, true_nms], dim=1)
+            
+            if self._img_idx == 0.:
+                self._all_true_boxes_variable = true_concat
+                self._all_pred_boxes_variable = pred_concat
+            else:
+                self._all_true_boxes_variable = torch.concat([self._all_true_boxes_variable, true_concat], axis=0)
+                self._all_pred_boxes_variable = torch.concat([self._all_pred_boxes_variable, pred_concat], axis=0)
+
+            self._img_idx += 1
+
+    def result(self):
+        return mean_average_precision(self._all_true_boxes_variable, self._all_pred_boxes_variable, self._num_classes)
+
+
 if __name__ == '__main__':
     num_classes = 20
-    num_boxes = 2
+    scaled_anchors = [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]]
+    num_anchors = len(scaled_anchors)
+    input_size = 416
     
-    y_true = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
-    y_true[:, 0, 0, 0] = 1 # class
-    y_true[:, 0, 0, num_classes] = 1 # confidence1
-    y_true[:, 0, 0, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
-    
-    y_true[:, 3, 3, 1] = 1 # class
-    y_true[:, 3, 3, num_classes] = 1 # confidence1
-    y_true[:, 3, 3, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
-    
-    y_true[:, 6, 6, 2] = 1 # class
-    y_true[:, 6, 6, num_classes] = 1 # confidence1
-    y_true[:, 6, 6, num_classes+1:num_classes+5] = [0.5, 0.5, 0.1, 0.1] # box1
+    y_true = np.zeros(shape=(1, 3, 5), dtype=np.float32)
+    y_true[:, 0, :] = [0.047, 0.047, 0.112, 0.147, 0.] # [cx, cy, w, h, class_idx]
+    y_true[:, 1, :] = [0.277, 0.277, 0.112, 0.147, 1.] # [cx, cy, w, h, class_idx]
+    y_true[:, 2, :] = [0.51, 0.51, 0.112, 0.147, 2.] # [cx, cy, w, h, class_idx]
     
     y_true_tensor = torch.as_tensor(y_true)
-    print(f'{y_true_tensor.shape}, {y_true_tensor.dtype}')
+    print(f'{y_true_tensor.size()}, {y_true_tensor.dtype}')
     
-    y_pred = np.zeros(shape=(1, 7, 7, (num_classes + (5*num_boxes))), dtype=np.float32)
-    y_pred[:, 0, 0, :3] = [0.8, 0.5, 0.1] # class
-    y_pred[:, 0, 0, num_classes] = 0.6 # confidence1
-    y_pred[:, 0, 0, num_classes+1:num_classes+5] = [0.49, 0.49, 0.1, 0.1] # box1
-    y_pred[:, 0, 0, num_classes+5] = 0.2 # confidence2
-    y_pred[:, 0, 0, num_classes+6:num_classes+10] = [0.45, 0.45, 0.1, 0.1] # box2
+    y_pred = np.zeros(shape=(1, num_anchors*(5 + num_classes), 13, 13), dtype=np.float32)
+    y_pred[:, 5:8, 0, 0] = [0.8, 0.5, 0.1] # class
+    y_pred[:, 4, 0, 0] = 0.6 # confidence1
+    y_pred[:, :4, 0, 0] = [0.49, 0.49, 0.1, 0.1] # box1
     
-    y_pred[:, 3, 3, :3] = [0.2, 0.8, 0.1] # class
-    y_pred[:, 3, 3, num_classes] = 0.1 # confidence1
-    y_pred[:, 3, 3, num_classes+1:num_classes+5] = [0.45, 0.45, 0.1, 0.1] # box1
-    y_pred[:, 3, 3, num_classes+5] = 0.9 # confidence2
-    y_pred[:, 3, 3, num_classes+6:num_classes+10] = [0.49, 0.49, 0.1, 0.1] # box2
+    y_pred[:, 5:8, 3, 3] = [0.2, 0.8, 0.1] # class
+    y_pred[:, 4, 3, 3] = 0.1 # confidence1
+    y_pred[:, :4, 3, 3] = [0.45, 0.45, 0.1, 0.1] # box1
     
-    y_pred[:, 6, 6, :3] = [0.1, 0.5, 0.8] # class
-    y_pred[:, 6, 6, num_classes] = 0.6 # confidence1
-    y_pred[:, 6, 6, num_classes+1:num_classes+5] = [0.49, 0.49, 0.1, 0.1] # box1
-    y_pred[:, 6, 6, num_classes+5] = 0.2 # confidence2
-    y_pred[:, 6, 6, num_classes+6:num_classes+10] = [0.45, 0.45, 0.1, 0.1] # box2
+    y_pred[:, 5:8, 6, 6] = [0.1, 0.5, 0.8] # class
+    y_pred[:, 4, 6, 6] = 0.6 # confidence1
+    y_pred[:, :4, 6, 6] = [0.49, 0.49, 0.1, 0.1] # box1
     
     y_pred_tensor = torch.as_tensor(y_pred)
-    print(f'{y_pred_tensor.shape}, {y_pred_tensor.dtype}')
-
-
-    # IoU Test
-    # numpy array
-    y_true_bbox = y_true[:, 0, 0, num_classes+1:num_classes+5]
-    y_pred_bbox = y_pred[:, 0, 0, num_classes+1:num_classes+5]
-    print(y_true_bbox)
-    print(y_pred_bbox)
-    print(intersection_over_union_numpy(y_true_bbox, y_pred_bbox))
-    # torch tensor
-    y_true_bbox = y_true_tensor[:, 0, 0, num_classes+1:num_classes+5]
-    y_pred_bbox = y_pred_tensor[:, 0, 0, num_classes+1:num_classes+5]
-    print(y_true_bbox)
-    print(y_pred_bbox)
-    print(intersection_over_union(y_true_bbox, y_pred_bbox))
+    print(f'{y_pred_tensor.size()}, {y_pred_tensor.dtype}')
     
-    
+    encode = encode_target(y_true_tensor, num_classes, scaled_anchors, input_size)
+    decode_true = decode_predictions(encode, num_classes, scaled_anchors, input_size)
+    print(f'Decode Truth\n{decode_true}\n{decode_true.size()}\n')
+
     # Decode Prediction Test
-    # numpy array
-    decode_pred = decode_predictions_numpy(y_pred, num_classes, num_boxes)
-    print(decode_pred)
-    # torch tensor
-    decode_pred_tensor = decode_predictions(y_pred_tensor, num_classes, num_boxes)
-    print(decode_pred_tensor)
+    decode_pred = decode_predictions(y_pred_tensor, num_classes, scaled_anchors, input_size)
+    print(f'Decode Pred\n{decode_pred}\n{decode_pred.size()}\n')
+
+    # NMS Test
+    boxes_pred = non_max_suppression(decode_pred[0], conf_threshold=0.5)
+    print(f'NMS Pred\n{boxes_pred}\n{boxes_pred.size()}\n')
+
+    boxes_true = non_max_suppression(decode_true[0], conf_threshold=0.5)
+    print(f'NMS Truth\n{boxes_true}\n{boxes_true.size()}\n')
+
+    iou = intersection_over_union(boxes_pred[0, :4], boxes_true[0, :4])
+    print(iou)
+
+    # mAP Test
+    map_metric = MeanAveragePrecision(num_classes, scaled_anchors, input_size)
+    map_metric.update_state(y_true_tensor, y_pred_tensor)
+    map = map_metric.result()    
+    print(map)
+    map_metric.reset_states()
     
+    map_metric.update_state(y_true_tensor, y_pred_tensor)
+    map = map_metric.result()    
+    print(map)
     
-    # Non Max Suppression Test
-    # numpy array
-    bboxes = non_max_suppression_numpy(decode_pred[0])
-    print(bboxes)
-    # torch tensor
-    bboxes_tensor = non_max_suppression(decode_pred_tensor[0])
-    print(bboxes_tensor) 
-        
-    print(f'-'*100)
-    
-    a = torch.FloatTensor([[0, 0, 0.5, 0.5]])
-    b = torch.FloatTensor([[0, 0, 0.4, 0.4], [0, 0, 0.5, 0.5]])
-    print(intersection_over_union(a, b))

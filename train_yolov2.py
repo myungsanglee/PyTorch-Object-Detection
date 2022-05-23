@@ -1,11 +1,13 @@
 import argparse
 import platform
+import os
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
 import torchsummary
+import timm
 
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from module.yolov2_detector import YoloV2Detector
@@ -37,7 +39,7 @@ def train(cfg):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])().features
+    backbone = get_model(cfg['backbone'])()
     
     model = YoloV2(
         backbone=backbone,
@@ -58,7 +60,11 @@ def train(cfg):
             monitor='val_loss', 
             save_last=True,
             every_n_epochs=cfg['save_freq']
-        )
+        ),
+        # EarlyStopping(
+        #     monitor='val_loss',
+        #     patience=10
+        # )
     ]
 
     # callbacks = add_expersimental_callbacks(cfg, callbacks)
@@ -68,7 +74,7 @@ def train(cfg):
         logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg), default_hp_metric=False),
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
-        plugins=DDPPlugin(find_unused_parameters=False) if platform.system() != 'Windows' else None,
+        plugins=DDPPlugin(find_unused_parameters=True) if platform.system() != 'Windows' else None,
         callbacks=callbacks,
         **cfg['trainer_options']
     )

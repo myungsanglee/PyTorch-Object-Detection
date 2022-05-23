@@ -27,7 +27,7 @@ class MeanAveragePrecision:
         true_boxes = decode_predictions(y_true, self._num_classes, self._num_boxes)
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._num_boxes)
 
-        for idx in torch.arange(y_true.size()[0]):
+        for idx in torch.arange(y_true.size(0)):
             pred_nms = non_max_suppression(pred_boxes[idx], iou_threshold=0.5, conf_threshold=0.4)
             pred_img_idx = torch.zeros([pred_nms.size()[0], 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:

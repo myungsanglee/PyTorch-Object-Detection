@@ -56,12 +56,6 @@ def train(cfg):
         cfg=cfg
     )
 
-    # model_module = YoloV1Detector.load_from_checkpoint(
-    #     checkpoint_path='./saved/yolov1_test/version_0/checkpoints/last.ckpt',
-    #     model=model,
-    #     cfg=cfg
-    # )
-
     callbacks = [
         LearningRateMonitor(logging_interval='epoch'),
         ModelCheckpoint(
