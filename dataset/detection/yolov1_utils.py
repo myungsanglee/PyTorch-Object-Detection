@@ -323,6 +323,7 @@ class DecodeYoloV1(nn.Module):
         self.conf_threshold = conf_threshold
         
     def forward(self, x):
+        assert x.size(0) == 1
         decode_pred = decode_predictions(x, self.num_classes, self.num_boxes)
         boxes = non_max_suppression(decode_pred[0], conf_threshold=self.conf_threshold)
         return boxes

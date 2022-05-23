@@ -16,7 +16,8 @@ def get_optimizer(optimizer_name, params, **kwargs):
     optim_dict = {
         'sgd': optim.SGD, 
         'adam': optim.Adam,
-        'radam': optim.RAdam
+        'radam': optim.RAdam,
+        'adamw': optim.AdamW
     }
     optimizer = optim_dict.get(optimizer_name)
     if optimizer:

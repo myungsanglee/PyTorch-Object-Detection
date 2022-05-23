@@ -3,7 +3,6 @@ sys.path.append('C:/my_github/PyTorch-Object-Detection')
 
 import torch
 from torch import nn
-import numpy as np
 
 from dataset.detection.yolov2_utils import intersection_over_union
 
@@ -69,27 +68,24 @@ class YoloV2Loss(nn.Module):
         loss_y = self.mse_loss(y * mask, ty * mask)
         loss_w = self.mse_loss(w * mask, tw * mask)
         loss_h = self.mse_loss(h * mask, th * mask)
-        box_loss = loss_x + loss_y + loss_w + loss_h
+        box_loss = self.lambda_coord * (1/batch_size) * (loss_x + loss_y + loss_w + loss_h)
 
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.bce_loss(conf * mask, tconf)
+        object_loss = (1/batch_size) * self.bce_loss(conf * mask, tconf)
 
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
+        no_object_loss = self.lambda_noobj * (1/batch_size) * self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
 
         # ================== #
         #   FOR CLASS LOSS   #
         # ================== #
-        class_loss = self.bce_loss(pred_cls[mask==1], tcls[mask==1])
+        class_loss = (1/batch_size) * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        loss = (self.lambda_coord * box_loss) + \
-               object_loss + \
-               (self.lambda_noobj * no_object_loss) + \
-               class_loss
+        loss = box_loss + object_loss + no_object_loss + class_loss
 
         return loss
 
