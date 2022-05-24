@@ -58,11 +58,17 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = albumentations.Compose([
             albumentations.HorizontalFlip(),
+            # albumentations.ColorJitter(
+            #     brightness=0.5,
+            #     contrast=0.2,
+            #     saturation=0.5,
+            #     hue=0.1    
+            # ),
             albumentations.ColorJitter(
-                brightness=0.5,
-                contrast=0.2,
-                saturation=0.5,
-                hue=0.1    
+                brightness=0.3,
+                contrast=0.3,
+                saturation=0.3,
+                hue=0.3    
             ),
             albumentations.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
             albumentations.Normalize(0, 1),

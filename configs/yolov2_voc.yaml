@@ -6,7 +6,7 @@ in_channels: 3
 num_classes : 20
 scaled_anchors : [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]]
 
-epochs: 1000
+epochs: 500
 
 train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
 val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
@@ -29,20 +29,20 @@ trainer_options:
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
 devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
-# optimizer: 'adam'
-# optimizer_options:
-#   lr: 1e-3
-#   weight_decay: 1e-5
+optimizer: 'adam'
+optimizer_options:
+  lr: 0
+  weight_decay: 1e-5
 
 # optimizer: 'radam'
 # optimizer_options:
 #   lr: 0
 #   weight_decay: 1e-5
 
-optimizer: 'adamw'
-optimizer_options:
-  lr: 0
-  weight_decay: 1e-5
+# optimizer: 'adamw'
+# optimizer_options:
+#   lr: 0
+#   weight_decay: 1e-5
 
 # optimizer: 'sgd'
 # optimizer_options:
