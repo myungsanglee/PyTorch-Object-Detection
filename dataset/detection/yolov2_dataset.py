@@ -10,7 +10,7 @@ import pytorch_lightning as pl
 import albumentations
 import albumentations.pytorch
 
-from dataset.detection.yolov2_utils import collater, encode_target, decode_target, get_tagged_img
+from dataset.detection.yolov2_utils import collater, encode_target, decode_target, get_tagged_img, get_target_boxes, get_tagged_img_2
 
 
 class YoloV2Dataset(Dataset):
@@ -58,17 +58,12 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = albumentations.Compose([
             albumentations.HorizontalFlip(),
-            # albumentations.ColorJitter(
-            #     brightness=0.5,
-            #     contrast=0.2,
-            #     saturation=0.5,
-            #     hue=0.1    
-            # ),
             albumentations.ColorJitter(
-                brightness=0.3,
-                contrast=0.3,
-                saturation=0.3,
-                hue=0.3    
+                brightness=0.5,
+                contrast=0.2,
+                saturation=0.5,
+                hue=0.1,
+                always_apply=True
             ),
             albumentations.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
             albumentations.Normalize(0, 1),
@@ -125,7 +120,7 @@ if __name__ == '__main__':
     data_module.prepare_data()
     data_module.setup()
 
-    for sample in data_module.train_dataloader():
+    for sample in data_module.val_dataloader():
         batch_x = sample['img']
         batch_y = sample['annot']
         print(batch_x.size())
@@ -139,8 +134,11 @@ if __name__ == '__main__':
         true_pred = encode_target(batch_y, 20, [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]], 416)
         true_boxes = decode_target(true_pred, 20, [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]], 416)[0]
         true_boxes = true_boxes[torch.where(true_boxes[..., 4] > 0)[0]]
+
+        tmp = get_target_boxes(batch_y, 416)
         
-        img = get_tagged_img(img, true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+        img = get_tagged_img_2(img, true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+        img = get_tagged_img(img, tmp, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 255, 0))
         
         cv2.imshow('test', img)
         key = cv2.waitKey(0)

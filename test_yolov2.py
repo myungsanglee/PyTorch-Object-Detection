@@ -21,7 +21,7 @@ def test(cfg, ckpt):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])().features
+    backbone = get_model(cfg['backbone'])()
     
     model = YoloV2(
         backbone=backbone,

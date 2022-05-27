@@ -145,7 +145,7 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
     return boxes_after_nms
 
 
-def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.5):
+def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     """Does Non Max Suppression given boxes
 
     Arguments:
@@ -356,7 +356,62 @@ def decode_target(input, num_classes, scaled_anchors, input_size):
     
     return output
 
+
+def get_target_boxes(target, input_size):
+    """Decode YoloV2 Ground Truth to Bounding Boxes
+
+    Arguments:
+        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+        input_size (int): Input Size of Image
     
+    Retruns:
+        List: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
+    """
+    dst = []
+
+    for b in range(target.size(0)):
+        for t in torch.arange(target.size(1)):
+            if target[b, t].sum() <= 0:
+                continue
+            gx = target[b, t, 0] * input_size
+            gy = target[b, t, 1] * input_size
+            gw = target[b, t, 2] * input_size
+            gh = target[b, t, 3] * input_size
+
+            dst.append([gx, gy, gw, gh, 1., target[b, t, 4]])
+
+    return dst
+    
+
+def get_target_boxes_for_map(target, input_size):
+    """Decode YoloV2 Ground Truth to Bounding Boxes
+
+    Arguments:
+        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+        input_size (int): Input Size of Image
+    
+    Retruns:
+        Dict: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
+    """
+    dst = dict()
+
+    for b in range(target.size(0)):
+        tmp = []
+        for t in torch.arange(target.size(1)):
+            if target[b, t].sum() <= 0:
+                continue
+            gx = target[b, t, 0] * input_size
+            gy = target[b, t, 1] * input_size
+            gw = target[b, t, 2] * input_size
+            gh = target[b, t, 3] * input_size
+
+            tmp.append([gx, gy, gw, gh, 1., target[b, t, 4]])
+
+        dst[b] = torch.FloatTensor(tmp)
+
+    return dst
+
+
 def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.5):
     """Calculates mean average precision
 
@@ -485,6 +540,41 @@ def get_tagged_img(img, boxes, names_path, color):
 
     return img
 
+def get_tagged_img_2(img, boxes, names_path, color):
+    """tagging result on img
+
+    Arguments:
+        img (Numpy Array): Image array
+        boxes (Tensor): boxes after performing NMS (None, 6)
+        names_path (String): path of label names file
+        color (tuple): boxes color
+        
+    Returns:
+        Numpy Array: tagged image array
+    """
+    with open(names_path, 'r') as f:
+        class_name_list = f.readlines()
+    class_name_list = [x.strip() for x in class_name_list]
+    for bbox in boxes:
+        class_name = class_name_list[int(bbox[-1])]
+        confidence_score = bbox[4]
+        cx = bbox[0]
+        cy = bbox[1]
+        w = bbox[2]
+        h = bbox[3]
+        xmin = int((cx - (w / 2)))
+        ymin = int((cy - (h / 2)))
+        xmax = int((cx + (w / 2)))
+        ymax = int((cy + (h / 2)))
+
+        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color, thickness=3)
+        img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
+                          fontFace=cv2.FONT_HERSHEY_PLAIN,
+                          fontScale=1,
+                          color=color)
+
+    return img
+
 
 class DecodeYoloV2(nn.Module):
     '''Decode Yolo V2 Predictions to bunding boxes
@@ -519,8 +609,10 @@ class MeanAveragePrecision:
         self._img_idx = 0
 
     def update_state(self, y_true, y_pred):
-        y_true = encode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
-        true_boxes = decode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
+        # y_true = encode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
+        # true_boxes = decode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
+        true_boxes = get_target_boxes_for_map(y_true, self._input_size)
+
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
@@ -530,8 +622,11 @@ class MeanAveragePrecision:
                 pred_img_idx = pred_img_idx.cuda()
             pred_concat = torch.concat([pred_img_idx, pred_nms], dim=1)
 
-            true_box = true_boxes[idx]
-            true_nms = true_box[torch.where(true_box[..., 4] > 0)[0]]
+            # true_box = true_boxes[idx]
+            # true_nms = true_box[torch.where(true_box[..., 4] > 0)[0]]
+            true_nms = true_boxes[int(idx)]
+            true_nms = true_nms.cuda()
+
             true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if true_nms.is_cuda:
                 true_img_idx = true_img_idx.cuda()
