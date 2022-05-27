@@ -6,10 +6,11 @@ in_channels: 3
 num_classes : 20
 scaled_anchors : [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]]
 
-epochs: 500
+epochs: 365
 
 train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
 val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
+# val_list : '/home/fssv2/myungsang/my_projects/PyTorch-Object-Detection/data/val.txt'
 names : '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'
 workers: 32 # number of workers to generate data
 batch_size: 64
@@ -27,16 +28,16 @@ trainer_options:
 #     - 'SWA'
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
-optimizer: 'adam'
-optimizer_options:
-  lr: 0
-  weight_decay: 1e-5
+# optimizer: 'adam'
+# optimizer_options:
+#   lr: 0
+#   weight_decay: 1e-5
 
 # optimizer: 'radam'
 # optimizer_options:
-#   lr: 0
+#   lr: 1e-3
 #   weight_decay: 1e-5
 
 # optimizer: 'adamw'
@@ -44,11 +45,11 @@ optimizer_options:
 #   lr: 0
 #   weight_decay: 1e-5
 
-# optimizer: 'sgd'
-# optimizer_options:
-#   lr: 0
-#   momentum: 0.9
-#   weight_decay: 1e-5
+optimizer: 'sgd'
+optimizer_options:
+  lr: 1e-3
+  momentum: 0.9
+  weight_decay: 1e-5
 
 # scheduler: 'multi_step'
 # scheduler_options:
@@ -61,10 +62,16 @@ optimizer_options:
 #   T_mult: 2
 #   eta_min: 1e-3
 
-scheduler: 'cosine_annealing_warm_up_restarts'
+# scheduler: 'cosine_annealing_warm_up_restarts'
+# scheduler_options:
+#   T_0: 1100
+#   T_mult: 2
+#   eta_max: 1e-3
+#   T_up: 220
+#   gamma: 0.96
+
+scheduler: 'yolo_lr'
 scheduler_options:
-  T_0: 1100
-  T_mult: 2
-  eta_max: 1e-3
-  T_up: 220
-  gamma: 0.96
+  burn_in: 1000
+  steps: [40000, 60000]
+  scales: [0.1, 0.1]

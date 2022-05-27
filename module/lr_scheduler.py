@@ -3,6 +3,8 @@ https://github.com/gaussian37/pytorch_deep_learning_models/blob/master/cosine_an
 '''
 
 import math
+from bisect import bisect_left
+
 from torch.optim.lr_scheduler import _LRScheduler
 
 class CosineAnnealingWarmUpRestarts(_LRScheduler):
@@ -54,8 +56,37 @@ class CosineAnnealingWarmUpRestarts(_LRScheduler):
             else:
                 self.T_i = self.T_0
                 self.T_cur = epoch
-                
+
         self.eta_max = self.base_eta_max * (self.gamma**self.cycle)
         self.last_epoch = math.floor(epoch)
+        for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
+            param_group['lr'] = lr
+
+
+class YoloLR(_LRScheduler):
+    def __init__(self, optimizer, burn_in, steps, scales, last_epoch=-1):
+        self.burn_in = burn_in
+        self.steps = steps
+        self.scales = scales
+        self.scale = 1.
+        super(YoloLR, self).__init__(optimizer, last_epoch)     
+    
+    def get_lr(self):
+        if self.last_epoch < self.burn_in:
+            return [base_lr * pow(self.last_epoch/self.burn_in, 4) for base_lr in self.base_lrs]
+        else:
+            if self.last_epoch  < self.steps[0]:
+                return self.base_lrs
+            else:
+                if self.last_epoch in self.steps:
+                    self.scale *= self.scales[bisect_left(self.steps, self.last_epoch)]
+                return [base_lr * self.scale for base_lr in self.base_lrs]
+
+    def step(self, epoch=None):
+        if epoch is None:
+            self.last_epoch += 1
+        else:
+            self.last_epoch = epoch
+
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group['lr'] = lr
