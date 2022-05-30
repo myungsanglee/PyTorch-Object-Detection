@@ -31,14 +31,9 @@ def get_configs(file):
 
 
 if __name__ == "__main__":
-    cfg = get_configs("configs/yolov1-adam.yaml")
+    cfg = get_configs("configs/yolov2_voc.yaml")
     print(cfg)
-    print(cfg['optimizer_options']['lr'])
-    try: 
-        cfg['a']
-    except KeyError:
-        print(f'ldjfakljladsjklfj')
-    
-    print(type(cfg['scheduler_options']['gamma']))
-    print(cfg['scheduler_options']['gamma'])
+    print(cfg['optimizer_options']['lr'])    
+    print(type(cfg['scheduler_options']))
+    print(cfg['scheduler_options'])
     
