@@ -52,7 +52,7 @@ def get_cfg():
     }
 
     cfg['accelerator'] = 'gpu'
-    cfg['devices'] = [0]
+    cfg['devices'] = [1]
 
     cfg['optimizer'] = 'sgd'
     cfg['optimizer_options'] = {
@@ -596,12 +596,15 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = A.Compose([
             A.HorizontalFlip(),
+            A.VerticalFlip(),
+            A.Cutout(),
+            A.Blur(),
+            A.CLAHE(),
             A.ColorJitter(
                 brightness=0.5,
                 contrast=0.2,
                 saturation=0.5,
-                hue=0.1,
-                always_apply=True
+                hue=0.1
             ),
             A.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
             A.Normalize(0, 1),
