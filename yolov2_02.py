@@ -6,14 +6,13 @@ from bisect import bisect_left
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
 import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
-from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingWarmRestarts
-from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingWarmRestarts, _LRScheduler
 import torchsummary
 import cv2
 import numpy as np
@@ -653,18 +652,18 @@ class YoloV2DataModule(pl.LightningDataModule):
 ######################################################################################################################
 # Darknet19 Model
 ######################################################################################################################
-def weight_initialize(model):
-    for m in model.modules():
-        if isinstance(m, nn.Conv2d):
-            nn.init.xavier_uniform_(m.weight)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0.)
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.constant_(m.weight, 1.)
-            nn.init.constant_(m.bias, 0.)
-        elif isinstance(m, nn.Linear):
-            nn.init.normal_(m.weight, 0., 0.01)
-            nn.init.constant_(m.bias, 0.)
+# def weight_initialize(model):
+#     for m in model.modules():
+#         if isinstance(m, nn.Conv2d):
+#             nn.init.xavier_uniform_(m.weight)
+#             if m.bias is not None:
+#                 nn.init.constant_(m.bias, 0.)
+#         elif isinstance(m, nn.BatchNorm2d):
+#             nn.init.constant_(m.weight, 1.)
+#             nn.init.constant_(m.bias, 0.)
+#         elif isinstance(m, nn.Linear):
+#             nn.init.normal_(m.weight, 0., 0.01)
+#             nn.init.constant_(m.bias, 0.)
 
 
 class Conv2dBnRelu(nn.Module):
@@ -766,7 +765,7 @@ class _Darknet19(nn.Module):
 
 def darknet19(num_classes=1000, in_channels=3):
     model = _Darknet19(num_classes, in_channels)
-    weight_initialize(model)
+    # weight_initialize(model)
     return model
 
 
@@ -805,9 +804,9 @@ class YoloV2(nn.Module):
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1)
         )
         
-        weight_initialize(self.b4_layer)
-        weight_initialize(self.b5_layer)
-        weight_initialize(self.yolov2_head)
+        # weight_initialize(self.b4_layer)
+        # weight_initialize(self.b5_layer)
+        # weight_initialize(self.yolov2_head)
 
     def forward(self, x):
         # backbone forward
@@ -1081,6 +1080,11 @@ def train(cfg):
             monitor='val_loss', 
             save_last=True,
             every_n_epochs=cfg['save_freq']
+        ),
+        EarlyStopping(
+            monitor='val_loss',
+            patience=20,
+            verbose=True
         )
     ]
 
@@ -1215,6 +1219,6 @@ if __name__ == '__main__':
 
     train(cfg)
 
-    # ckpt = './saved/yolov2_voc/version_1/checkpoints/epoch=34-step=7699.ckpt'
+    # ckpt = './saved/yolov2_voc/version_2/checkpoints/epoch=34-step=7699.ckpt'
     # test(cfg, ckpt)
     # inference(cfg, ckpt)

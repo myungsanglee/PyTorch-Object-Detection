@@ -1212,6 +1212,6 @@ if __name__ == '__main__':
 
     train(cfg)
 
-    # ckpt = os.path.join(cfg['save_dir'], cfg['model'] + '_' + cfg['dataset_name'], 'version_0', 'chekpoints', 'epoch=49-step=10999.ckpt')
+    # ckpt = './saved/yolov2_voc/version_0/checkpoints/epoch=19-step=4399.ckpt'
     # test(cfg, ckpt)
     # inference(cfg, ckpt)
