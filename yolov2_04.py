@@ -849,9 +849,9 @@ class YoloV2Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 1
-        self.lambda_noobj = 0.5
-        self.lambda_coord = 5
+        self.lambda_obj = 5
+        self.lambda_noobj = 1
+        self.lambda_coord = 1
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
@@ -874,8 +874,8 @@ class YoloV2Loss(nn.Module):
 
         x = torch.sigmoid(prediction[..., 0])
         y = torch.sigmoid(prediction[..., 1])
-        w = prediction[..., 2]
-        h = prediction[..., 3]
+        w = torch.sqrt(torch.exp(prediction[..., 2]))
+        h = torch.sqrt(torch.exp(prediction[..., 3]))
         conf = torch.sigmoid(prediction[..., 4])
         pred_cls = torch.sigmoid(prediction[..., 5:])
         
@@ -974,8 +974,8 @@ class YoloV2Loss(nn.Module):
                 mask[b, best_n, gj, gi] = 1
                 tx[b, best_n, gj, gi] = gx - gi
                 ty[b, best_n, gj, gi] = gy - gj
-                tw[b, best_n, gj, gi] = torch.log(gw/scaled_anchors[best_n][0])
-                th[b, best_n, gj, gi] = torch.log(gh/scaled_anchors[best_n][1])
+                tw[b, best_n, gj, gi] = torch.sqrt(gw/scaled_anchors[best_n][0])
+                th[b, best_n, gj, gi] = torch.sqrt(gh/scaled_anchors[best_n][1])
                 tconf[b, best_n, gj, gi] = calc_iou[best_n]
                 tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
