@@ -878,7 +878,7 @@ class YoloV2Loss(nn.Module):
         w = torch.sqrt(torch.exp(prediction[..., 2]))
         h = torch.sqrt(torch.exp(prediction[..., 3]))
         conf = torch.sigmoid(prediction[..., 4])
-        pred_cls = torch.sigmoid(prediction[..., 5:])
+        pred_cls = prediction[..., 5:]
         
         mask, noobj_mask, tx, ty, tw, th, tconf, tcls = self.encode_target(target, self.num_classes, self.scaled_anchors, layer_w, layer_h, self.ignore_threshold)
         if prediction.is_cuda:
