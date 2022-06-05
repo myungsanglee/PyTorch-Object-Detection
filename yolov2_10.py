@@ -766,7 +766,7 @@ class _Darknet19(nn.Module):
 
 def darknet19(num_classes=1000, in_channels=3):
     model = _Darknet19(num_classes, in_channels)
-    weight_initialize(model)
+    # weight_initialize(model)
     return model
 
 
@@ -782,34 +782,25 @@ class YoloV2(nn.Module):
         self.num_anchors = num_anchors
 
         self.b4_layer = nn.Sequential(
-            nn.Conv2d(512, 64, 1, 1),
-            nn.BatchNorm2d(64),
-            nn.ReLU()
+            Conv2dBnRelu(512, 64, 1)
         )
 
         self.b5_layer = nn.Sequential(
-            nn.Conv2d(1024, 1024, 3, 1, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU(),
-
-            nn.Conv2d(1024, 1024, 3, 1, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU()
+            Conv2dBnRelu(1024, 1024, 3),
+            Conv2dBnRelu(1024, 1024, 3)
         )
         
         self.yolov2_head = nn.Sequential(
-            nn.Conv2d(1280, 1024, 3, 1, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU(),
+            Conv2dBnRelu(1280, 1024, 3),
             
-            nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1)
+            nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 
         self.dropout = nn.Dropout2d()
         
-        weight_initialize(self.b4_layer)
-        weight_initialize(self.b5_layer)
-        weight_initialize(self.yolov2_head)
+        # weight_initialize(self.b4_layer)
+        # weight_initialize(self.b5_layer)
+        # weight_initialize(self.yolov2_head)
 
     def forward(self, x):
         # backbone forward
@@ -876,7 +867,7 @@ class YoloV2Loss(nn.Module):
         batch_size, _, layer_h, layer_w = input.size()
         # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
         prediction = input.view(batch_size, len(self.scaled_anchors), -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-
+        
         x = torch.sigmoid(prediction[..., 0])
         y = torch.sigmoid(prediction[..., 1])
         w = torch.sqrt(torch.exp(prediction[..., 2]))
