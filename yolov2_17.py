@@ -55,7 +55,7 @@ def get_cfg():
 
     cfg['optimizer'] = 'sgd'
     cfg['optimizer_options'] = {
-        'lr': 1e-2,
+        'lr': 1e-3,
         'momentum': 0.9,
         'weight_decay': 1e-5
     }
@@ -1055,7 +1055,17 @@ def train(cfg):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])()
+    backbone = get_model(cfg['backbone'])(num_classes=200)
+
+    # Load pretrained weights
+    ckpt_path = os.path.join(os.getcwd(), 'ckpt/darknet19-tiny-imagenet.ckpt')
+    checkpoint = torch.load(ckpt_path)
+
+    state_dict = checkpoint["state_dict"]
+    for key in list(state_dict):
+        state_dict[key.replace("model.", "")] = state_dict.pop(key)
+
+    backbone.load_state_dict(state_dict)
     
     model = YoloV2(
         backbone=backbone,
