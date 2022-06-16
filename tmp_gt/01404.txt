@@ -1,3 +1,0 @@
-tvmonitor 3 117 112 231
-person 130 90 259 412
-person 97 57 361 357

@@ -1,3 +1,0 @@
-tvmonitor 332 106 416 247
-tvmonitor 0 149 86 302
-chair 84 259 359 416

@@ -1,3 +1,0 @@
-sofa 295 143 416 331
-diningtable 4 217 363 416
-pottedplant 236 124 310 209

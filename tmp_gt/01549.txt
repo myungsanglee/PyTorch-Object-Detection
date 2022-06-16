@@ -1,2 +1,0 @@
-aeroplane 149 128 362 351
-aeroplane 0 72 217 416

@@ -1,2 +1,0 @@
-pottedplant 0 95 43 340
-pottedplant 29 99 399 337

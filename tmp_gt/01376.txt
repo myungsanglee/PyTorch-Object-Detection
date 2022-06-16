@@ -1,2 +1,0 @@
-tvmonitor 312 106 357 208
-tvmonitor 33 147 183 321

@@ -1,5 +1,0 @@
-tvmonitor 115 138 205 193
-tvmonitor 310 181 404 287
-person 99 168 229 312
-person 2 75 123 291
-cat 75 259 229 400

@@ -1,2 +1,0 @@
-aeroplane 0 4 410 416
-person 0 15 104 416

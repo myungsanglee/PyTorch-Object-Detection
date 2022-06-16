@@ -1,3 +1,0 @@
-sofa 123 153 335 335
-tvmonitor 62 94 121 169
-pottedplant 0 7 118 416

@@ -1,5 +1,0 @@
-bottle 196 18 261 239
-bottle 86 110 129 299
-bottle 245 47 280 185
-bottle 34 2 76 129
-bottle 0 1 39 105

@@ -1,2 +1,0 @@
-motorbike 4 2 403 410
-motorbike 69 94 369 311

@@ -1,3 +1,0 @@
-chair 208 104 345 401
-chair 91 87 212 343
-diningtable 78 69 352 406

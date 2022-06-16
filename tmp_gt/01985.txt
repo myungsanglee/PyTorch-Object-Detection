@@ -1,6 +1,0 @@
-sheep 2 252 165 416
-person 150 61 346 383
-person 310 78 416 416
-person 94 98 132 227
-person 15 95 59 180
-person 44 107 102 248

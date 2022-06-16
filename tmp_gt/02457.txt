@@ -1,2 +1,0 @@
-tvmonitor 183 29 416 348
-tvmonitor 0 51 185 299

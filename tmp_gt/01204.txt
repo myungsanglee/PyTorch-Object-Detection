@@ -1,4 +1,0 @@
-chair 75 321 199 416
-chair 199 336 337 416
-tvmonitor 106 252 165 286
-diningtable 106 303 346 416

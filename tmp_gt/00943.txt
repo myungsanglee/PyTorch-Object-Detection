@@ -1,2 +1,0 @@
-pottedplant 295 132 416 416
-pottedplant 134 287 327 416

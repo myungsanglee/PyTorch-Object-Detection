@@ -1,8 +1,0 @@
-boat 0 2 285 229
-person 209 51 255 129
-person 75 35 102 69
-person 257 63 293 130
-person 292 46 315 123
-person 35 2 63 122
-person 62 3 86 82
-person 341 51 376 106

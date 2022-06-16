@@ -1,4 +1,0 @@
-sofa 90 205 183 334
-pottedplant 9 167 64 415
-chair 207 206 234 270
-pottedplant 173 181 199 219

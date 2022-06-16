@@ -1,3 +1,0 @@
-aeroplane 20 219 172 296
-aeroplane 162 217 280 283
-aeroplane 274 228 356 274

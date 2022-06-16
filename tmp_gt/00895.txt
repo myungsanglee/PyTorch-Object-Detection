@@ -1,2 +1,0 @@
-person 74 61 324 416
-pottedplant 297 132 386 255
