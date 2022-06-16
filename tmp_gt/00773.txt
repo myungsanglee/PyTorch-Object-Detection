@@ -1,4 +1,0 @@
-tvmonitor 2 22 100 346
-bottle 158 267 235 326
-bottle 89 271 141 330
-tvmonitor 313 2 416 98

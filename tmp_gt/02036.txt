@@ -1,3 +1,0 @@
-chair 321 181 406 412
-bottle 152 114 174 203
-diningtable 40 149 366 416

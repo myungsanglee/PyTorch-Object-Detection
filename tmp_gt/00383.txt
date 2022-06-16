@@ -1,7 +1,0 @@
-pottedplant 13 190 77 250
-pottedplant 20 254 74 309
-pottedplant 4 303 88 414
-person 183 129 279 416
-person 183 136 223 220
-person 99 156 193 416
-cat 212 220 286 389

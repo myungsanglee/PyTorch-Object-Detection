@@ -1,7 +1,0 @@
-sofa 139 195 345 312
-chair 1 209 106 374
-pottedplant 0 2 84 276
-person 257 175 321 345
-person 217 169 262 341
-person 178 166 223 333
-person 27 195 128 367

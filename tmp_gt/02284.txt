@@ -1,4 +1,0 @@
-sofa 77 232 379 415
-pottedplant 0 1 245 416
-pottedplant 247 1 327 312
-tvmonitor 320 170 356 208

@@ -1,6 +1,0 @@
-chair 186 297 288 415
-chair 33 226 69 322
-chair 64 222 158 342
-chair 2 242 86 394
-diningtable 70 232 300 342
-diningtable 260 318 416 416

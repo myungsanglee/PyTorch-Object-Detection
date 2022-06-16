@@ -1,6 +1,0 @@
-pottedplant 344 289 381 328
-pottedplant 242 296 277 337
-pottedplant 152 297 188 341
-pottedplant 43 304 82 342
-pottedplant 51 119 89 164
-pottedplant 153 117 187 159

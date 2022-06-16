@@ -1,2 +1,0 @@
-bottle 180 78 212 255
-diningtable 0 194 414 416

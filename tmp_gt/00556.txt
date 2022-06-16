@@ -1,2 +1,0 @@
-pottedplant 150 1 248 123
-pottedplant 247 1 416 414

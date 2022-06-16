@@ -1,3 +1,0 @@
-person 206 134 371 290
-person 0 94 198 416
-diningtable 103 246 416 416

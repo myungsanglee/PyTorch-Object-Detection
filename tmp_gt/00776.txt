@@ -1,2 +1,0 @@
-tvmonitor 168 146 215 200
-tvmonitor 211 156 256 212

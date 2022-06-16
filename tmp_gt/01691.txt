@@ -1,2 +1,0 @@
-aeroplane 227 134 412 283
-aeroplane 30 224 165 297

@@ -1,3 +1,0 @@
-person 153 11 319 338
-pottedplant 0 2 163 328
-pottedplant 97 41 141 181

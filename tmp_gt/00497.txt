@@ -1,7 +1,0 @@
-sofa 0 206 120 396
-chair 69 185 233 366
-diningtable 218 168 286 230
-chair 267 161 297 238
-chair 231 165 268 246
-pottedplant 20 51 104 141
-pottedplant 342 61 416 164
