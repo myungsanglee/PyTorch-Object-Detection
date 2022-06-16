@@ -1,0 +1,2 @@
+tvmonitor 226 5 416 330
+pottedplant 0 1 224 330

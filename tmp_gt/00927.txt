@@ -1,0 +1,6 @@
+sofa 75 290 272 416
+chair 188 217 321 362
+pottedplant 306 206 356 267
+bottle 24 230 48 287
+pottedplant 136 155 182 306
+tvmonitor 118 168 146 211

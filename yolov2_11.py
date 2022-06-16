@@ -1210,11 +1210,102 @@ def inference(cfg, ckpt):
 ######################################################################################################################
 # Main
 ######################################################################################################################
+from tqdm import tqdm
+def test_map(cfg, ckpt):
+    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
+
+    data_module = YoloV2DataModule(
+        train_list=cfg['train_list'], 
+        val_list=cfg['val_list'],
+        workers=cfg['workers'], 
+        input_size=cfg['input_size'],
+        batch_size=1
+    )
+    data_module.prepare_data()
+    data_module.setup()
+
+    backbone = get_model(cfg['backbone'])()
+    
+    model = YoloV2(
+        backbone=backbone,
+        num_classes=cfg['num_classes'],
+        num_anchors=len(cfg['scaled_anchors'])
+    )
+
+    if torch.cuda.is_available:
+        model = model.cuda()
+    
+    model_module = YoloV2Detector.load_from_checkpoint(
+        checkpoint_path=ckpt,
+        model=model, 
+        cfg=cfg
+    )
+    model_module.eval()
+
+    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=0.25)
+
+    with open(cfg['names'], 'r') as f:
+        class_name_list = f.readlines()
+    class_name_list = [x.strip() for x in class_name_list]
+
+    img_num = 0
+    # Inference
+    for sample in tqdm(data_module.val_dataloader()):
+        batch_x = sample['img']
+        batch_y = sample['annot']
+
+        if torch.cuda.is_available:
+            batch_x = batch_x.cuda()
+
+        with torch.no_grad():
+            predictions = model_module(batch_x)
+        boxes = yolov2_decoder(predictions)
+
+        img_num += 1
+        pred_txt_fd = open(os.path.join(os.getcwd(), 'tmp_detection', f'{img_num:05d}.txt'), 'w')
+        true_txt_fd = open(os.path.join(os.getcwd(), 'tmp_gt', f'{img_num:05d}.txt'), 'w')
+
+        for bbox in boxes:
+            class_name = class_name_list[int(bbox[-1])]
+            confidence_score = bbox[4]
+            cx = bbox[0]
+            cy = bbox[1]
+            w = bbox[2]
+            h = bbox[3]
+            xmin = int((cx - (w / 2)))
+            ymin = int((cy - (h / 2)))
+            xmax = int((cx + (w / 2)))
+            ymax = int((cy + (h / 2)))
+
+            pred_txt_fd.write(f'{class_name} {confidence_score} {xmin} {ymin} {xmax} {ymax}\n')
+        pred_txt_fd.close()
+            
+        true_boxes = get_target_boxes(batch_y, 416)
+
+        for bbox in true_boxes:
+            class_name = class_name_list[int(bbox[-1])]
+            confidence_score = bbox[4]
+            cx = bbox[0]
+            cy = bbox[1]
+            w = bbox[2]
+            h = bbox[3]
+            xmin = int((cx - (w / 2)))
+            ymin = int((cy - (h / 2)))
+            xmax = int((cx + (w / 2)))
+            ymax = int((cy + (h / 2)))
+
+            true_txt_fd.write(f'{class_name} {xmin} {ymin} {xmax} {ymax}\n')
+        true_txt_fd.close()
+
+
 if __name__ == '__main__':
     cfg = get_cfg()
 
     train(cfg)
 
-    # ckpt = './saved/yolov2_voc/version_2/checkpoints/epoch=34-step=7699.ckpt'
+    # ckpt = './saved/yolov2_voc/version_11/checkpoints/epoch=89-step=19799.ckpt'
     # test(cfg, ckpt)
     # inference(cfg, ckpt)
+
+    # test_map(cfg, ckpt)

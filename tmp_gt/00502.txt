@@ -1,0 +1,5 @@
+bottle 8 159 79 330
+person 8 45 242 409
+person 83 73 411 409
+person 16 92 62 158
+person 54 119 97 188

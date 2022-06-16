@@ -1,0 +1,3 @@
+sofa 274 206 374 322
+diningtable 188 303 391 416
+tvmonitor 191 164 232 210

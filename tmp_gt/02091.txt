@@ -1,0 +1,9 @@
+bicycle 195 130 383 416
+person 220 3 345 330
+person 113 1 227 343
+bicycle 115 186 218 383
+bicycle 50 193 130 359
+bicycle 0 209 44 327
+person 2 111 49 301
+person 54 80 141 317
+chair 36 238 64 309

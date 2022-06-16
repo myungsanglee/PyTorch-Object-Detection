@@ -1,0 +1,2 @@
+diningtable 46 121 395 416
+chair 0 101 43 199

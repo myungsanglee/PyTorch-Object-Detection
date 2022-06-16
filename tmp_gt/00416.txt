@@ -1,0 +1,8 @@
+sheep 1 202 106 414
+sheep 33 215 266 414
+bottle 24 58 112 133
+bottle 257 153 326 240
+person 310 9 397 413
+person 89 2 236 407
+person 83 3 219 220
+person 226 3 413 411

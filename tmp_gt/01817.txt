@@ -1,0 +1,9 @@
+chair 0 188 142 413
+chair 207 217 325 416
+chair 277 189 349 413
+diningtable 26 188 328 413
+tvmonitor 0 75 78 193
+person 247 68 297 208
+pottedplant 2 1 51 75
+pottedplant 178 177 241 257
+bottle 98 229 117 316

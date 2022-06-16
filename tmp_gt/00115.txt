@@ -1,0 +1,4 @@
+chair 137 251 225 416
+chair 18 313 146 416
+diningtable 10 246 214 416
+pottedplant 123 83 142 137

@@ -1,0 +1,2 @@
+pottedplant 350 54 416 298
+person 79 97 327 416

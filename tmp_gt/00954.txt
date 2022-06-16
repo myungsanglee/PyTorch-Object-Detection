@@ -1,0 +1,3 @@
+cat 90 59 370 384
+pottedplant 177 1 253 109
+pottedplant 236 2 371 134
