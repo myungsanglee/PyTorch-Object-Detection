@@ -1,0 +1,3 @@
+pottedplant 301 147 382 340
+pottedplant 89 141 135 251
+diningtable 1 185 416 416

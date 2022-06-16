@@ -1,0 +1,8 @@
+tvmonitor 125 167 177 239
+pottedplant 19 157 40 214
+pottedplant 0 186 15 229
+pottedplant 29 216 50 258
+pottedplant 15 223 32 265
+pottedplant 4 226 18 270
+pottedplant 27 259 49 301
+sofa 154 234 371 414

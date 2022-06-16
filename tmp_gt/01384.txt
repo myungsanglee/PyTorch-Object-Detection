@@ -1,0 +1,4 @@
+tvmonitor 280 99 380 215
+tvmonitor 186 186 222 228
+chair 191 221 233 341
+sofa 6 225 157 341

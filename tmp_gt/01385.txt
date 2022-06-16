@@ -1,0 +1,3 @@
+bicycle 32 27 412 412
+person 31 0 88 87
+person 1 0 41 94

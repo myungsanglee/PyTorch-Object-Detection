@@ -1,0 +1,4 @@
+sofa 135 190 280 283
+sofa 44 188 149 275
+diningtable 3 273 268 416
+pottedplant 332 223 411 330

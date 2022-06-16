@@ -1,0 +1,2 @@
+bottle 292 77 323 185
+diningtable 1 90 416 416

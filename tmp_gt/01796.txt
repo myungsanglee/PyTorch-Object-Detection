@@ -1,0 +1,4 @@
+chair 284 164 416 416
+pottedplant 132 77 173 176
+tvmonitor 155 80 230 185
+tvmonitor 237 75 318 180

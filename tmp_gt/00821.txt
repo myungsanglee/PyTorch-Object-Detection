@@ -1,0 +1,4 @@
+chair 168 193 211 302
+chair 218 241 292 364
+bicycle 48 173 78 241
+tvmonitor 0 270 35 377

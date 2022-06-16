@@ -1,0 +1,4 @@
+dog 59 291 414 416
+person 149 64 313 340
+person 119 65 204 128
+pottedplant 270 12 352 95
