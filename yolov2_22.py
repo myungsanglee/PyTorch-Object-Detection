@@ -51,7 +51,7 @@ def get_cfg():
     }
 
     cfg['accelerator'] = 'gpu'
-    cfg['devices'] = [1]
+    cfg['devices'] = [0]
 
     cfg['optimizer'] = 'sgd'
     cfg['optimizer_options'] = {
@@ -969,7 +969,7 @@ class YoloV2Loss(nn.Module):
                 ty[b, best_n, gj, gi] = gy - gj
                 tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
                 th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
-                tconf[b, best_n, gj, gi] = calc_iou[best_n]
+                tconf[b, best_n, gj, gi] = 1
                 tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    

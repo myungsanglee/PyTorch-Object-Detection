@@ -7,8 +7,8 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
 import pytorch_lightning as pl
-import albumentations
-import albumentations.pytorch
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 from dataset.detection.yolov2_utils import collater, encode_target, decode_target, get_tagged_img, get_target_boxes, get_tagged_img_2
 
@@ -56,25 +56,28 @@ class YoloV2DataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         
     def setup(self, stage=None):
-        train_transforms = albumentations.Compose([
-            albumentations.HorizontalFlip(),
-            albumentations.ColorJitter(
-                brightness=0.5,
-                contrast=0.2,
-                saturation=0.5,
-                hue=0.1,
-                always_apply=True
-            ),
-            albumentations.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
-            albumentations.Normalize(0, 1),
-            albumentations.pytorch.ToTensorV2(),
-        ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
+        train_transforms = A.Compose([
+            # A.HorizontalFlip(),
+            # A.VerticalFlip(),
+            # A.Cutout(),
+            # A.Blur(),
+            A.CLAHE(),
+            # A.ColorJitter(
+            #     brightness=0.5,
+            #     contrast=0.2,
+            #     saturation=0.5,
+            #     hue=0.1
+            # ),
+            A.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
+            A.Normalize(0, 1),
+            ToTensorV2(),
+        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
 
-        valid_transform = albumentations.Compose([
-            albumentations.Resize(self.input_size, self.input_size, always_apply=True),
-            albumentations.Normalize(0, 1),
-            albumentations.pytorch.ToTensorV2(),
-        ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
+        valid_transform = A.Compose([
+            A.Resize(self.input_size, self.input_size, always_apply=True),
+            A.Normalize(0, 1),
+            ToTensorV2(),
+        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
         
         self.train_dataset = YoloV2Dataset(
             train_transforms, 
@@ -110,39 +113,115 @@ class YoloV2DataModule(pl.LightningDataModule):
 
 
 if __name__ == '__main__':
-    data_module = YoloV2DataModule(
-        train_list='/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt', 
-        val_list='/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt',
-        workers=0, 
-        input_size=416,
-        batch_size=1
+    # data_module = YoloV2DataModule(
+    #     train_list='/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt', 
+    #     val_list='/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt',
+    #     workers=0, 
+    #     input_size=416,
+    #     batch_size=1
+    # )
+    # data_module.prepare_data()
+    # data_module.setup()
+
+
+    # for sample in data_module.train_dataloader():
+    #     batch_x = sample['img']
+    #     batch_y = sample['annot']
+    #     print(batch_x.size())
+    #     print(batch_y.size())
+        
+    #     img = batch_x[0].numpy()   
+    #     img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
+    #     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    #     h, w, _ = img.shape
+
+    #     true_boxes = get_target_boxes(batch_y, 416)
+        
+    #     img = get_tagged_img(img, true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+
+    #     cv2.imshow('test', img)
+    #     key = cv2.waitKey(0)
+    #     if key == 27:
+    #         break
+
+    # cv2.destroyAllWindows()
+
+    input_size = 416
+    train_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
+    val_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
+
+    train_transforms = A.Compose([
+        A.HorizontalFlip(),
+        # A.VerticalFlip(),
+        # A.Cutout(),
+        # A.Blur(3),
+        A.CLAHE(),
+        A.ColorJitter(
+            brightness=0.5,
+            contrast=0.2,
+            saturation=0.5,
+            hue=0.1
+        ),
+        A.RandomResizedCrop(input_size, input_size, (0.3, 1)),
+        A.Normalize(0, 1),
+        ToTensorV2(),
+    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
+
+    valid_transform = A.Compose([
+        A.Resize(input_size, input_size, always_apply=True),
+        A.Normalize(0, 1),
+        ToTensorV2(),
+    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
+    
+    train_dataset = YoloV2Dataset(
+        train_transforms, 
+        train_list
     )
-    data_module.prepare_data()
-    data_module.setup()
+    
+    valid_dataset = YoloV2Dataset(
+        valid_transform, 
+        train_list
+    )
 
-    for sample in data_module.val_dataloader():
-        batch_x = sample['img']
-        batch_y = sample['annot']
-        print(batch_x.size())
-        print(batch_y.size())
-        
-        img = batch_x[0].numpy()   
-        img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        h, w, _ = img.shape
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=1,
+        shuffle=False,
+        collate_fn=collater
+    )
 
-        true_pred = encode_target(batch_y, 20, [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]], 416)
-        true_boxes = decode_target(true_pred, 20, [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]], 416)[0]
-        true_boxes = true_boxes[torch.where(true_boxes[..., 4] > 0)[0]]
+    origin_dataloader = DataLoader(
+        valid_dataset,
+        batch_size=1,
+        shuffle=False,
+        collate_fn=collater
+    )
 
-        tmp = get_target_boxes(batch_y, 416)
+    for train_batch, origin_batch in zip(train_dataloader, origin_dataloader):
+        train_x = train_batch['img']
+        train_y = train_batch['annot']
+
+        origin_x = origin_batch['img']
+        origin_y = origin_batch['annot']
+
+        train_img = train_x[0].numpy()   
+        train_img = (np.transpose(train_img, (1, 2, 0))*255.).astype(np.uint8).copy()
+        train_img = cv2.cvtColor(train_img, cv2.COLOR_RGB2BGR)
+
+        origin_img = origin_x[0].numpy()   
+        origin_img = (np.transpose(origin_img, (1, 2, 0))*255.).astype(np.uint8).copy()
+        origin_img = cv2.cvtColor(origin_img, cv2.COLOR_RGB2BGR)
+
+
+        train_true_boxes = get_target_boxes(train_y, 416)
+        origin_true_boxes = get_target_boxes(origin_y, 416)
         
-        img = get_tagged_img_2(img, true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
-        img = get_tagged_img(img, tmp, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 255, 0))
-        
-        cv2.imshow('test', img)
+        train_img = get_tagged_img(train_img, train_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+        origin_img = get_tagged_img_2(origin_img, origin_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+
+        cv2.imshow('Train', train_img)
+        cv2.imshow('Original', origin_img)
         key = cv2.waitKey(0)
         if key == 27:
             break
-
     cv2.destroyAllWindows()
