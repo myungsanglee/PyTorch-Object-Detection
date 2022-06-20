@@ -1,3 +1,4 @@
+from curses import nonl
 import platform
 import os
 import time
@@ -51,7 +52,7 @@ def get_cfg():
     }
 
     cfg['accelerator'] = 'gpu'
-    cfg['devices'] = [1]
+    cfg['devices'] = [0]
 
     cfg['optimizer'] = 'sgd'
     cfg['optimizer_options'] = {
@@ -652,8 +653,8 @@ class YoloV2DataModule(pl.LightningDataModule):
 def weight_initialize(model):
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
-            nn.init.xavier_uniform_(m.weight)
-            # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            # nn.init.xavier_uniform_(m.weight)
+            nn.init.kaiming_uniform_(m.weight)
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0.)
         elif isinstance(m, nn.BatchNorm2d):
@@ -763,7 +764,7 @@ class _Darknet19(nn.Module):
 
 def darknet19(num_classes=1000, in_channels=3):
     model = _Darknet19(num_classes, in_channels)
-    # weight_initialize(model)
+    weight_initialize(model)
     return model
 
 
@@ -795,9 +796,9 @@ class YoloV2(nn.Module):
 
         self.dropout = nn.Dropout2d(0.5)
         
-        # weight_initialize(self.b4_layer)
-        # weight_initialize(self.b5_layer)
-        # weight_initialize(self.yolov2_head)
+        weight_initialize(self.b4_layer)
+        weight_initialize(self.b5_layer)
+        weight_initialize(self.yolov2_head)
 
     def forward(self, x):
         # backbone forward
@@ -907,7 +908,7 @@ class YoloV2Loss(nn.Module):
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        loss = (box_loss + object_loss + no_object_loss + class_loss)
+        loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
 
         return loss
 
