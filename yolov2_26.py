@@ -489,7 +489,7 @@ class MeanAveragePrecision:
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
-            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=0.25)
+            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=0.5)
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()
@@ -649,21 +649,6 @@ class YoloV2DataModule(pl.LightningDataModule):
 ######################################################################################################################
 # Darknet19 Model
 ######################################################################################################################
-def weight_initialize(model):
-    for m in model.modules():
-        if isinstance(m, nn.Conv2d):
-            # nn.init.xavier_uniform_(m.weight)
-            nn.init.kaiming_normal_(m.weight, mode='fan_out')
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0.)
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.constant_(m.weight, 1.)
-            nn.init.constant_(m.bias, 0.)
-        elif isinstance(m, nn.Linear):
-            nn.init.normal_(m.weight, 0., 0.01)
-            nn.init.constant_(m.bias, 0.)
-
-
 class Conv2dBnRelu(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  dilation=1, groups=1, padding_mode='zeros'):
@@ -763,7 +748,6 @@ class _Darknet19(nn.Module):
 
 def darknet19(num_classes=1000, in_channels=3):
     model = _Darknet19(num_classes, in_channels)
-    # weight_initialize(model)
     return model
 
 
@@ -794,10 +778,6 @@ class YoloV2(nn.Module):
         )
 
         self.dropout = nn.Dropout2d(0.5)
-        
-        # weight_initialize(self.b4_layer)
-        # weight_initialize(self.b5_layer)
-        # weight_initialize(self.yolov2_head)
 
     def forward(self, x):
         # backbone forward
@@ -1304,7 +1284,7 @@ if __name__ == '__main__':
 
     # train(cfg)
 
-    ckpt = './saved/yolov2_voc/version_22/checkpoints/epoch=204-step=45099.ckpt'
-    # test(cfg, ckpt)
-    inference(cfg, ckpt)
+    ckpt = './saved/yolov2_voc/version_26/checkpoints/epoch=184-step=40699.ckpt'
+    test(cfg, ckpt)
+    # inference(cfg, ckpt)
     # make_pred_result(cfg, ckpt)
