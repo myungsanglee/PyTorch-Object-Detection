@@ -489,7 +489,7 @@ class MeanAveragePrecision:
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
-            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=0.5)
+            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=0.25)
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()
@@ -1171,10 +1171,10 @@ def inference(cfg, ckpt):
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        true_boxes = get_target_boxes(batch_y, 416)
+        # true_boxes = get_target_boxes(batch_y, 416)
 
         tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
-        tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
+        # tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('test', tagged_img)
         key = cv2.waitKey(0)
@@ -1220,7 +1220,7 @@ def make_pred_result(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=0.5)
+    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=0.25)
 
     with open(cfg['names'], 'r') as f:
         class_name_list = f.readlines()
@@ -1257,7 +1257,7 @@ def make_pred_result(cfg, ckpt):
 
             pred_txt_fd.write(f'{class_name} {confidence_score} {xmin} {ymin} {xmax} {ymax}\n')
         pred_txt_fd.close()
-            
+        
         # true_boxes = get_target_boxes(batch_y, 416)
 
         # for bbox in true_boxes:
@@ -1282,9 +1282,9 @@ def make_pred_result(cfg, ckpt):
 if __name__ == '__main__':
     cfg = get_cfg()
 
-    # train(cfg)
+    train(cfg)
 
-    ckpt = './saved/yolov2_voc/version_26/checkpoints/epoch=184-step=40699.ckpt'
-    test(cfg, ckpt)
+    # ckpt = './saved/yolov2_voc/version_26/checkpoints/epoch=184-step=40699.ckpt'
+    # test(cfg, ckpt)
     # inference(cfg, ckpt)
     # make_pred_result(cfg, ckpt)
