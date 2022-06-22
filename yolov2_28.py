@@ -51,14 +51,13 @@ def get_cfg():
     }
 
     cfg['accelerator'] = 'gpu'
-    cfg['devices'] = [1]
+    cfg['devices'] = [0]
 
     cfg['optimizer'] = 'sgd'
     cfg['optimizer_options'] = {
         'lr': 1e-3,
         'momentum': 0.9,
-        'weight_decay': 1e-5,
-        'nesterov': True
+        'weight_decay': 1e-5
     }
 
     cfg['scheduler'] = 'yolo_lr'
@@ -1033,7 +1032,17 @@ def train(cfg):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])()
+    backbone = get_model(cfg['backbone'])(num_classes=200)
+
+    # Load pretrained weights
+    ckpt_path = os.path.join(os.getcwd(), 'ckpt/darknet19-tiny-imagenet.ckpt')
+    checkpoint = torch.load(ckpt_path)
+
+    state_dict = checkpoint["state_dict"]
+    for key in list(state_dict):
+        state_dict[key.replace("model.", "")] = state_dict.pop(key)
+
+    backbone.load_state_dict(state_dict)
     
     model = YoloV2(
         backbone=backbone,
@@ -1172,10 +1181,10 @@ def inference(cfg, ckpt):
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        true_boxes = get_target_boxes(batch_y, 416)
+        # true_boxes = get_target_boxes(batch_y, 416)
 
         tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
-        tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
+        # tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('test', tagged_img)
         key = cv2.waitKey(0)
@@ -1221,7 +1230,7 @@ def make_pred_result(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=0.5)
+    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=0.25)
 
     with open(cfg['names'], 'r') as f:
         class_name_list = f.readlines()
@@ -1258,7 +1267,7 @@ def make_pred_result(cfg, ckpt):
 
             pred_txt_fd.write(f'{class_name} {confidence_score} {xmin} {ymin} {xmax} {ymax}\n')
         pred_txt_fd.close()
-            
+        
         # true_boxes = get_target_boxes(batch_y, 416)
 
         # for bbox in true_boxes:
