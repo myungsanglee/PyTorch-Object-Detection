@@ -105,13 +105,6 @@ def collater(data):
     return {'img': torch.stack(imgs), 'annot': padded_annots}
 
 
-def get_model(model_name):
-    model_dict = {
-        'darknet19': darknet19
-    }
-    return model_dict.get(model_name)
-
-
 def get_optimizer(optimizer_name, params, **kwargs):
     optim_dict = {
         'sgd': optim.SGD, 
