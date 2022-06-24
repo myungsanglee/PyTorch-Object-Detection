@@ -569,7 +569,7 @@ def get_tagged_img_2(img, boxes, names_path, color):
         xmax = int((cx + (w / 2)))
         ymax = int((cy + (h / 2)))
 
-        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color, thickness=3)
+        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color, thickness=1)
         img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
                           fontFace=cv2.FONT_HERSHEY_PLAIN,
                           fontScale=1,

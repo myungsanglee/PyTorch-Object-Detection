@@ -55,9 +55,9 @@ def get_cfg():
 
     cfg['optimizer'] = 'sgd'
     cfg['optimizer_options'] = {
-        'lr': 1e-3,
+        'lr': 1e-4,
         'momentum': 0.9,
-        'weight_decay': 1e-5
+        'weight_decay': 5e-4
     }
 
     cfg['scheduler'] = 'yolo_lr'
@@ -965,6 +965,7 @@ class YoloV2Detector(pl.LightningModule):
         self.model = model
         self.loss_fn = YoloV2Loss(cfg['num_classes'], cfg['scaled_anchors'])
         self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'])
+        self.tmp_num = 0
 
     def forward(self, x):
         predictions = self.model(x)
@@ -1116,7 +1117,7 @@ def test(cfg, ckpt):
         logger=False,
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
-        plugins=DDPPlugin(find_unused_parameters=False) if platform.system() != 'Windows' else None
+        plugins=DDPPlugin(find_unused_parameters=True) if platform.system() != 'Windows' else None
     )
     
     trainer.validate(model_module, data_module)
