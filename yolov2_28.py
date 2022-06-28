@@ -20,7 +20,6 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 
-
 ######################################################################################################################
 # Set Hyperparameter
 ######################################################################################################################
@@ -57,14 +56,15 @@ def get_cfg():
     cfg['optimizer_options'] = {
         'lr': 1e-4,
         'momentum': 0.9,
-        'weight_decay': 5e-4
+        'weight_decay': 5e-4,
+        'nesterov': True
     }
 
     cfg['scheduler'] = 'yolo_lr'
     cfg['scheduler_options'] = {
         'burn_in': 1000,
-        'steps': [40000, 60000],
-        'scales': [0.1, 0.1]
+        'steps': [40000],
+        'scales': [0.1]
     }
 
     return cfg
@@ -1015,7 +1015,7 @@ class YoloV2Detector(pl.LightningModule):
                     "scheduler": scheduler,
                     "interval": "step"
                 }
-            } 
+            }
         
         except KeyError:
             return optim
@@ -1037,7 +1037,7 @@ def train(cfg):
 
     # Load pretrained weights
     ckpt_path = os.path.join(os.getcwd(), 'ckpt/darknet19-tiny-imagenet.ckpt')
-    checkpoint = torch.load(ckpt_path)
+    checkpoint = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(cfg['devices'][0]))
 
     state_dict = checkpoint["state_dict"]
     for key in list(state_dict):
