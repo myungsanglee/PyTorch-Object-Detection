@@ -56,7 +56,7 @@ def get_cfg():
     cfg['optimizer_options'] = {
         'lr': 1e-4,
         'momentum': 0.9,
-        'weight_decay': 5e-4,
+        'weight_decay': 1e-4,
         'nesterov': True
     }
 
@@ -1071,7 +1071,7 @@ def train(cfg):
             verbose=True
         )
     ]
-
+    
     trainer = pl.Trainer(
         max_epochs=cfg['epochs'],
         logger=TensorBoardLogger(cfg['save_dir'], cfg['model'] + '_' + cfg['dataset_name'], default_hp_metric=False),
@@ -1082,7 +1082,7 @@ def train(cfg):
         **cfg['trainer_options']
     )
     
-    trainer.fit(model_module, data_module)
+    trainer.fit(model_module, data_module, ckpt_path='saved/yolov2_voc/version_39/checkpoints/last.ckpt')
 
 
 ######################################################################################################################
