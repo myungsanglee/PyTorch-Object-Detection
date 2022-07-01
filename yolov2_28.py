@@ -595,6 +595,9 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = A.Compose([
             A.HorizontalFlip(),
+            A.ChannelShuffle(),
+            A.Blur(),
+            A.GaussNoise(),
             A.CLAHE(),
             A.ColorJitter(
                 brightness=0.5,
@@ -777,7 +780,7 @@ class YoloV2(nn.Module):
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 
-        self.dropout = nn.Dropout2d(0.5)
+        # self.dropout = nn.Dropout2d(0.5)
 
     def forward(self, x):
         # backbone forward
@@ -796,7 +799,7 @@ class YoloV2(nn.Module):
 
         x = torch.cat((b4, b5), 1)
 
-        x = self.dropout(x)
+        # x = self.dropout(x)
 
         # prediction
         predictions = self.yolov2_head(x)
@@ -1082,7 +1085,7 @@ def train(cfg):
         **cfg['trainer_options']
     )
     
-    trainer.fit(model_module, data_module, ckpt_path='saved/yolov2_voc/version_39/checkpoints/last.ckpt')
+    trainer.fit(model_module, data_module)
 
 
 ######################################################################################################################
