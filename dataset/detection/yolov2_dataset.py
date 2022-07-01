@@ -151,18 +151,18 @@ if __name__ == '__main__':
     val_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
 
     train_transforms = A.Compose([
-        A.HorizontalFlip(),
-        # A.VerticalFlip(),
-        # A.Cutout(),
-        # A.Blur(3),
-        A.CLAHE(),
-        A.ColorJitter(
-            brightness=0.5,
-            contrast=0.2,
-            saturation=0.5,
-            hue=0.1
-        ),
-        A.RandomResizedCrop(input_size, input_size, (0.3, 1)),
+        # A.HorizontalFlip(),
+        A.ChannelShuffle(p=1),
+        # A.Blur(),
+        # A.GaussNoise(),
+        # A.CLAHE(),
+        # A.ColorJitter(
+        #     brightness=0.5,
+        #     contrast=0.2,
+        #     saturation=0.5,
+        #     hue=0.1
+        # ),
+        A.RandomResizedCrop(input_size, input_size, (1, 1)),
         A.Normalize(0, 1),
         ToTensorV2(),
     ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
