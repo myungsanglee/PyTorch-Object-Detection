@@ -1195,9 +1195,9 @@ def make_pred_result(cfg, ckpt):
 if __name__ == '__main__':
     cfg = get_cfg()
 
-    train(cfg)
+    # train(cfg)
 
-    # ckpt = './saved/yolov2_voc/version_26/checkpoints/epoch=184-step=40699.ckpt'
-    # test(cfg, ckpt)
+    ckpt = 'saved/yolov2_voc/version_43/checkpoints/epoch=234-step=51699.ckpt'
+    test(cfg, ckpt)
     # inference(cfg, ckpt)
     # make_pred_result(cfg, ckpt)
