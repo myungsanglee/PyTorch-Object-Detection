@@ -59,6 +59,8 @@ class _Darknet19(nn.Module):
         self.layer4 = self._make_layers(layer4)
         self.layer5 = self._make_layers(layer5)
 
+        self.dropout = nn.Dropout2d(p=0.5)
+
         self.classifier = nn.Sequential(
             Conv2dBnRelu(1024, num_classes, 1),
             nn.AdaptiveAvgPool2d(1),
@@ -71,8 +73,9 @@ class _Darknet19(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        print(x.size())
         x = self.layer5(x)
+
+        x = self.dropout(x)
 
         x = self.classifier(x)
         return x
@@ -104,31 +107,3 @@ if __name__ == '__main__':
     model = darknet19(num_classes, in_channels)
     
     torchsummary.summary(model, (in_channels, input_size, input_size), batch_size=1, device='cpu')
-    
-    # model = model.features[:17]
-    # torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
-    
-    # print(list(model.children()))
-    # print(f'\n-------------------------------------------------------------\n')
-    # new_model = nn.Sequential(*list(model.children())[:-1])
-    # print(new_model.modules)
-    
-    # for idx, child in enumerate(model.children()):
-    #     print(child)
-    #     if idx == 0:
-    #         for i, param in enumerate(child.parameters()):
-    #             print(i, param)
-    #             param.requires_grad = False
-    #             if i == 4:
-    #                 break
-
-    # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
-    
-    # from torchvision import models
-
-    # model = models.resnet18(num_classes=200)
-    # models.vgg16
-    # # model = models.resnet50(num_classes=200)
-    # model = models.efficientnet_b0(num_classes=200)
-    # torchsummary.summary(model, (3, 64, 64), batch_size=1, device='cpu')
-
