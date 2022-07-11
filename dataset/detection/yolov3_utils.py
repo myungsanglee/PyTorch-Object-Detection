@@ -1,12 +1,8 @@
-import sys
-import os
-
 from collections import Counter
 import math
 
 import torch
 from torch import nn
-import numpy as np
 import cv2
 
 
@@ -77,7 +73,7 @@ def collater(data):
 #     return iou
 
 
-def bbox_iou(boxes1, boxes2, x1y1x2y2=False, GIoU=False, DIoU=False, CIoU=False, eps=1e-7):
+def bbox_iou(boxes1, boxes2, x1y1x2y2=False, GIoU=False, DIoU=False, CIoU=False, eps=1e-6):
     """Calculation of intersection-over-union
 
     Arguments:
@@ -479,8 +475,6 @@ class MeanAveragePrecision:
         self._img_idx = 0
 
     def update_state(self, y_true, y_preds):
-        # y_true = encode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
-        # true_boxes = decode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
         true_boxes = get_target_boxes_for_map(y_true, self._input_size)
 
         pred_boxes = 0
@@ -501,11 +495,9 @@ class MeanAveragePrecision:
                 pred_img_idx = pred_img_idx.cuda()
             pred_concat = torch.cat([pred_img_idx, pred_nms], dim=1)
 
-            # true_box = true_boxes[idx]
-            # true_nms = true_box[torch.where(true_box[..., 4] > 0)[0]]
             true_nms = true_boxes[int(idx)]
-            true_nms = true_nms.cuda()
-
+            if pred_nms.is_cuda:
+                true_nms = true_nms.cuda()
             true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if true_nms.is_cuda:
                 true_img_idx = true_img_idx.cuda()
@@ -532,9 +524,6 @@ if __name__ == '__main__':
 
     tmp_bbox1[1] = torch.tensor([50, 50, 100, 100])
     tmp_bbox2[1] = torch.tensor([100, 100, 100, 100])
-
-    # tmp_bbox1[0] = torch.tensor([0, 0, 100, 100])
-    # tmp_bbox2[0] = torch.tensor([50, 50, 150, 150])
 
     print(tmp_bbox1)
     print(tmp_bbox2)

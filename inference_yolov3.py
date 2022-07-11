@@ -5,7 +5,6 @@ import os
 import torch
 import numpy as np
 import cv2
-import timm
 
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
