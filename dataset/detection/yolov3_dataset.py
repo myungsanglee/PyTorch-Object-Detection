@@ -10,7 +10,7 @@ import pytorch_lightning as pl
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from dataset.detection.yolov3_utils import collater, encode_target, decode_target, get_tagged_img, get_target_boxes, get_tagged_img_2
+from dataset.detection.yolov3_utils import collater, get_tagged_img, get_target_boxes
 
 
 class YoloV3Dataset(Dataset):
@@ -111,39 +111,6 @@ class YoloV3DataModule(pl.LightningDataModule):
 
 
 if __name__ == '__main__':
-    # data_module = YoloV2DataModule(
-    #     train_list='/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt', 
-    #     val_list='/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt',
-    #     workers=0, 
-    #     input_size=416,
-    #     batch_size=1
-    # )
-    # data_module.prepare_data()
-    # data_module.setup()
-
-
-    # for sample in data_module.train_dataloader():
-    #     batch_x = sample['img']
-    #     batch_y = sample['annot']
-    #     print(batch_x.size())
-    #     print(batch_y.size())
-        
-    #     img = batch_x[0].numpy()   
-    #     img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-    #     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    #     h, w, _ = img.shape
-
-    #     true_boxes = get_target_boxes(batch_y, 416)
-        
-    #     img = get_tagged_img(img, true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
-
-    #     cv2.imshow('test', img)
-    #     key = cv2.waitKey(0)
-    #     if key == 27:
-    #         break
-
-    # cv2.destroyAllWindows()
-
     input_size = 416
     train_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
     val_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
@@ -158,7 +125,7 @@ if __name__ == '__main__':
             saturation=0.5,
             hue=0.1
         ),
-        A.RandomResizedCrop(input_size, input_size, (1, 1)),
+        A.RandomResizedCrop(input_size, input_size, (0.3, 1)),
         A.Normalize(0, 1),
         ToTensorV2(),
     ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
@@ -212,7 +179,7 @@ if __name__ == '__main__':
         origin_true_boxes = get_target_boxes(origin_y, 416)
         
         train_img = get_tagged_img(train_img, train_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
-        origin_img = get_tagged_img_2(origin_img, origin_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+        origin_img = get_tagged_img(origin_img, origin_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
 
         cv2.imshow('Train', train_img)
         cv2.imshow('Original', origin_img)

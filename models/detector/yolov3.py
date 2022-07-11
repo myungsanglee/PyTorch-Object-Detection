@@ -6,14 +6,16 @@ import torch
 from torch import nn
 import torchsummary
 
-from models.initialize import weight_initialize
 from models.layers.conv_block import Conv2dBnRelu
+from models.initialize import weight_initialize
 from utils.module_select import get_model
 
 
 class YoloV3(nn.Module):
     def __init__(self, backbone, num_classes, num_anchors):
         super().__init__()
+
+        assert num_anchors == 9
 
         self.backbone = backbone
         self.num_classes = num_classes
@@ -60,6 +62,13 @@ class YoloV3(nn.Module):
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 
+        # weight_initialize(self.c3_conv)
+        # weight_initialize(self.c4_conv)
+        # weight_initialize(self.c4_route)
+        # weight_initialize(self.c5_route)
+        # weight_initialize(self.p3_head)
+        # weight_initialize(self.p4_head)
+        # weight_initialize(self.p5_head)
 
     def forward(self, x):
         # backbone forward
@@ -109,13 +118,13 @@ if __name__ == '__main__':
 
     torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
 
-    # from module.yolov3_detector import YoloV3Detector
-    # from utils.yaml_helper import get_configs
+    from module.yolov3_detector import YoloV3Detector
+    from utils.yaml_helper import get_configs
 
-    # model = YoloV3Detector(
-    #     model=model,
-    #     cfg=get_configs('configs/yolov3_voc.yaml')
-    # )
-    # file_path = 'model.onnx'
-    # input_sample = torch.randn((1, 3, 416, 416))
-    # model.to_onnx(file_path, input_sample, export_params=True)
+    model = YoloV3Detector(
+        model=model,
+        cfg=get_configs('configs/yolov3_voc.yaml')
+    )
+    file_path = 'model.onnx'
+    input_sample = torch.randn((1, 3, 416, 416))
+    model.to_onnx(file_path, input_sample, export_params=True)

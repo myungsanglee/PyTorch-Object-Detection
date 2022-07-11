@@ -5,7 +5,7 @@ sys.path.append(os.getcwd())
 import torch
 from torch import nn
 
-from dataset.detection.yolov3_utils import intersection_over_union
+from dataset.detection.yolov3_utils import bbox_iou
 
 
 class YoloV3Loss(nn.Module):
@@ -32,8 +32,11 @@ class YoloV3Loss(nn.Module):
         
         self.ignore_threshold = 0.5
         
-        self.mse_loss = nn.MSELoss(reduction='sum')
-        self.bce_loss = nn.BCELoss(reduction='sum')
+        # self.mse_loss = nn.MSELoss(reduction='sum')
+        # self.bce_loss = nn.BCELoss(reduction='sum')
+
+        self.mse_loss = nn.MSELoss(reduction='mean')
+        self.bce_loss = nn.BCELoss(reduction='mean')
 
     def forward(self, input, target):
         """
@@ -91,7 +94,8 @@ class YoloV3Loss(nn.Module):
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
+        # loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
+        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
 
         return loss
 
@@ -143,7 +147,7 @@ class YoloV3Loss(nn.Module):
                 gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
                 anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
 
-                calc_iou = intersection_over_union(gt_box, anchors_box) # [num_anchors, 1]
+                calc_iou = bbox_iou(gt_box, anchors_box, x1y1x2y2=True) # [num_anchors, 1]
                 calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
                 
                 noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
