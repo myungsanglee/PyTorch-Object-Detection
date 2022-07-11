@@ -38,7 +38,11 @@ trainer_options:
 #     - 'SWA'
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
+<<<<<<< HEAD
 devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+=======
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+>>>>>>> 64367bc6c344bde7b2efd0fd1724332ecf9c6889
 
 # optimizer: 'adam'
 # optimizer_options:

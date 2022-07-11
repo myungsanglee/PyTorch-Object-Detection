@@ -25,8 +25,12 @@ class YoloV3Detector(pl.LightningModule):
         loss_p3 = self.loss_fn_p3(p3, batch['annot'])
         loss_p4 = self.loss_fn_p4(p4, batch['annot'])
         loss_p5 = self.loss_fn_p5(p5, batch['annot'])
+<<<<<<< HEAD
         # loss = (loss_p3 + loss_p4 + loss_p5) / 3
         loss = (loss_p3 + loss_p4 + loss_p5)
+=======
+        loss = loss_p3 + loss_p4 + loss_p5
+>>>>>>> 64367bc6c344bde7b2efd0fd1724332ecf9c6889
 
         self.log('train_loss', loss, prog_bar=True, logger=True)
 
@@ -40,8 +44,12 @@ class YoloV3Detector(pl.LightningModule):
         loss_p3 = self.loss_fn_p3(p3, batch['annot'])
         loss_p4 = self.loss_fn_p4(p4, batch['annot'])
         loss_p5 = self.loss_fn_p5(p5, batch['annot'])
+<<<<<<< HEAD
         # loss = (loss_p3 + loss_p4 + loss_p5) / 3
         loss = (loss_p3 + loss_p4 + loss_p5)
+=======
+        loss = loss_p3 + loss_p4 + loss_p5
+>>>>>>> 64367bc6c344bde7b2efd0fd1724332ecf9c6889
 
         self.log('val_loss', loss, prog_bar=True, logger=True)
 
