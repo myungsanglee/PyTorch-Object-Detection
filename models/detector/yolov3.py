@@ -7,13 +7,6 @@ from torch import nn
 import torchsummary
 
 from models.layers.conv_block import Conv2dBnRelu
-from models.initialize import weight_initialize
-from torch import dropout, nn
-import torchsummary
-import timm
-
-from models.initialize import weight_initialize
-from models.layers.conv_block import Conv2dBnRelu
 from utils.module_select import get_model
 
 

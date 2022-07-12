@@ -48,7 +48,7 @@ def train(cfg):
         ),
         EarlyStopping(
             monitor='val_loss',
-            patience=6,
+            patience=10,
             verbose=True
         )
     ]
