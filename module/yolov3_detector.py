@@ -1,4 +1,3 @@
-from matplotlib.pyplot import sca
 import pytorch_lightning as pl
 
 from utils.module_select import get_optimizer, get_scheduler

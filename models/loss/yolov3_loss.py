@@ -25,9 +25,9 @@ class YoloV3Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 5
+        self.lambda_obj = 1
         self.lambda_noobj = 1
-        self.lambda_coord = 5
+        self.lambda_coord = 1
         self.lambda_class = 1
         
         self.ignore_threshold = 0.7
@@ -91,7 +91,7 @@ class YoloV3Loss(nn.Module):
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+        loss = (box_loss + object_loss + no_object_loss + class_loss)
 
         return loss
 
@@ -157,4 +157,3 @@ class YoloV3Loss(nn.Module):
                 tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
-

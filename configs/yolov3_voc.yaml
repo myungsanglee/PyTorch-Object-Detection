@@ -20,7 +20,6 @@ epochs: 365
 
 train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
 val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
-# val_list : '/home/fssv2/myungsang/my_projects/PyTorch-Object-Detection/data/val.txt'
 names : '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'
 workers: 32 # number of workers to generate data
 batch_size: 64
