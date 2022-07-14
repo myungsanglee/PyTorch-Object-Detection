@@ -16,7 +16,7 @@ def collater(data):
 
     Returns:
         Dict: 정렬된 batch data.
-        'img': list of image tensor, [batch_size, channel, height, width] shape
+        'img': image tensor, [batch_size, channel, height, width] shape
         'annot': 동일 shape으로 정렬된 tensor, [batch_size, max_num_annots, 5(cx, cy, w, h, cid)] shape
     """
     imgs = [s['image'] for s in data]
