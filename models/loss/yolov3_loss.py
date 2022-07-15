@@ -27,8 +27,8 @@ class YoloV3Loss(nn.Module):
         # pay loss for no object (noobj) and the box coordinates (coord)
         self.lambda_obj = 1
         self.lambda_noobj = 1
-        self.lambda_coord = 5
-        self.lambda_class = 1
+        self.lambda_coord = 1
+        self.lambda_class = 5
         
         self.ignore_threshold = 0.7
 
