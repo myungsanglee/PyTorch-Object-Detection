@@ -26,7 +26,7 @@ class YoloV3Loss(nn.Module):
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
         self.lambda_obj = 5
-        self.lambda_noobj = 0.5
+        self.lambda_noobj = 1
         self.lambda_coord = 5
         self.lambda_class = 1
         
@@ -79,12 +79,12 @@ class YoloV3Loss(nn.Module):
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.lambda_obj * self.mse_loss(conf * mask, tconf)
+        object_loss = self.lambda_obj * self.bce_loss(conf * mask, tconf)
 
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.lambda_noobj * self.mse_loss(conf * noobj_mask, noobj_mask * 0.0)
+        no_object_loss = self.lambda_noobj * self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
 
         # ================== #
         #   FOR CLASS LOSS   #

@@ -5,10 +5,9 @@ sys.path.append(os.getcwd())
 import torch
 from torch import nn
 import torchsummary
-import timm
 
-from models.initialize import weight_initialize
 from utils.module_select import get_model
+from models.layers.conv_block import Conv2dBnRelu
 
 
 class YoloV2(nn.Module):
@@ -20,32 +19,21 @@ class YoloV2(nn.Module):
         self.num_anchors = num_anchors
 
         self.b4_layer = nn.Sequential(
-            nn.Conv2d(512, 64, 1, 1),
-            nn.BatchNorm2d(64),
-            nn.ReLU()
+            Conv2dBnRelu(512, 64, 1)
         )
 
         self.b5_layer = nn.Sequential(
-            nn.Conv2d(1024, 1024, 3, 1, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU(),
-
-            nn.Conv2d(1024, 1024, 3, 1, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU()
+            Conv2dBnRelu(1024, 1024, 3),
+            Conv2dBnRelu(1024, 1024, 3)
         )
         
         self.yolov2_head = nn.Sequential(
-            nn.Conv2d(1280, 1024, 3, 1, 1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU(),
+            Conv2dBnRelu(1280, 1024, 3),
             
-            nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1)
+            nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
-        
-        weight_initialize(self.b4_layer)
-        weight_initialize(self.b5_layer)
-        weight_initialize(self.yolov2_head)
+
+        # self.dropout = nn.Dropout2d(0.5)
 
     def forward(self, x):
         # backbone forward
@@ -63,6 +51,8 @@ class YoloV2(nn.Module):
         b5 = self.b5_layer(b5)
 
         x = torch.cat((b4, b5), 1)
+
+        # x = self.dropout(x)
 
         # prediction
         predictions = self.yolov2_head(x)

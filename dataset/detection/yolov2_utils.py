@@ -1,11 +1,9 @@
-from email.errors import StartBoundaryNotFoundDefect
 import sys
 import os
-
-from matplotlib.pyplot import sca
 sys.path.append(os.getcwd())
 
 from collections import Counter
+import math
 
 import torch
 from torch import nn
@@ -44,70 +42,142 @@ def collater(data):
     return {'img': torch.stack(imgs), 'annot': padded_annots}
 
 
-def intersection_over_union_numpy(boxes1, boxes2):
+# def intersection_over_union_numpy(boxes1, boxes2):
+#     """Calculation of intersection-over-union
+
+#     Arguments:
+#         boxes1 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+#         boxes2 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+
+#     Returns:
+#         Numpy Array: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
+#     """
+
+#     box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+#     box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+
+#     box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+#     box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+
+#     inter_xmin = np.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
+#     inter_ymin = np.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
+#     inter_xmax = np.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
+#     inter_ymax = np.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
+
+#     inter_area = np.clip((inter_xmax - inter_xmin), 0) * np.clip((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
+#     box1_area = np.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
+#     box2_area = np.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
+
+#     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
+
+
+# def intersection_over_union(boxes1, boxes2):
+#     """Calculation of intersection-over-union
+
+#     Arguments:
+#         boxes1 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+#         boxes2 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+
+#     Returns:
+#         Tensor: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
+#     """
+
+#     box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+#     box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+
+#     box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+#     box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+
+#     inter_xmin = torch.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
+#     inter_ymin = torch.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
+#     inter_xmax = torch.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
+#     inter_ymax = torch.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
+
+#     inter_area = torch.clamp((inter_xmax - inter_xmin), 0) * torch.clamp((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
+#     box1_area = torch.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
+#     box2_area = torch.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
+
+#     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
+
+
+def bbox_iou(boxes1, boxes2, x1y1x2y2=False, GIoU=False, DIoU=False, CIoU=False, eps=1e-6):
     """Calculation of intersection-over-union
 
     Arguments:
-        boxes1 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
-        boxes2 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
-
-    Returns:
-        Numpy Array: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
-    """
-
-    box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
-    box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
-    box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
-    box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
-
-    box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
-    box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
-    box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
-    box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
-
-    inter_xmin = np.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
-    inter_ymin = np.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
-    inter_xmax = np.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
-    inter_ymax = np.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
-
-    inter_area = np.clip((inter_xmax - inter_xmin), 0) * np.clip((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
-    box1_area = np.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
-    box2_area = np.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
-
-    return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
-
-
-def intersection_over_union(boxes1, boxes2):
-    """Calculation of intersection-over-union
-
-    Arguments:
-        boxes1 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
-        boxes2 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+        boxes1 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h] or [x1, y1, x2, y2]
+        boxes2 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h] or [x1, y1, x2, y2]
+        x1y1x2y2 (Bool): boxes coordinate type if 'True' that means [xmin, ymin, xmax, ymax]
+        GIoU (Bool): Calculating Generalized-IoU
+        DIoU (Bool): Calculating Distance-IoU
+        CIoU (Bool): Calculating Complete-IoU
+        eps (Float): epsilon
 
     Returns:
         Tensor: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
     """
 
-    box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
-    box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
-    box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
-    box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+    if x1y1x2y2:
+        box1_xmin = boxes1[..., 0:1] # (batch, S, S, 1)
+        box1_ymin = boxes1[..., 1:2] # (batch, S, S, 1)
+        box1_xmax = boxes1[..., 2:3] # (batch, S, S, 1)
+        box1_ymax = boxes1[..., 3:4] # (batch, S, S, 1)
 
-    box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
-    box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
-    box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
-    box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+        box2_xmin = boxes2[..., 0:1] # (batch, S, S, 1)
+        box2_ymin = boxes2[..., 1:2] # (batch, S, S, 1)
+        box2_xmax = boxes2[..., 2:3] # (batch, S, S, 1)
+        box2_ymax = boxes2[..., 3:4] # (batch, S, S, 1)
+
+    else:
+        box1_xmin = boxes1[..., 0:1] - (boxes1[..., 2:3] / 2.) # (batch, S, S, 1)
+        box1_ymin = boxes1[..., 1:2] - (boxes1[..., 3:4] / 2.) # (batch, S, S, 1)
+        box1_xmax = boxes1[..., 0:1] + (boxes1[..., 2:3] / 2.) # (batch, S, S, 1)
+        box1_ymax = boxes1[..., 1:2] + (boxes1[..., 3:4] / 2.) # (batch, S, S, 1)
+
+        box2_xmin = boxes2[..., 0:1] - (boxes2[..., 2:3] / 2.) # (batch, S, S, 1)
+        box2_ymin = boxes2[..., 1:2] - (boxes2[..., 3:4] / 2.) # (batch, S, S, 1)
+        box2_xmax = boxes2[..., 0:1] + (boxes2[..., 2:3] / 2.) # (batch, S, S, 1)
+        box2_ymax = boxes2[..., 1:2] + (boxes2[..., 3:4] / 2.) # (batch, S, S, 1)
 
     inter_xmin = torch.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
     inter_ymin = torch.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
     inter_xmax = torch.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
     inter_ymax = torch.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
-
     inter_area = torch.clamp((inter_xmax - inter_xmin), 0) * torch.clamp((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
+    
     box1_area = torch.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
     box2_area = torch.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
+    union_area = box1_area + box2_area - inter_area + eps
 
-    return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
+    iou = inter_area / union_area # (batch, S, S, 1)
+
+    if GIoU or DIoU or CIoU:
+        cw = torch.maximum(box1_xmax, box2_xmax) - torch.minimum(box1_xmin, box2_xmin)  # convex (smallest enclosing box) width
+        ch = torch.maximum(box1_ymax, box2_ymax) - torch.minimum(box1_ymin, box2_ymin)  # convex height
+        if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
+            c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
+            rho2 = ((box2_xmin + box2_xmax - box1_xmin - box1_xmax) ** 2 +
+                    (box2_ymin + box2_ymax - box1_ymin - box1_ymax) ** 2) / 4  # center distance squared
+            if DIoU:
+                return iou - rho2 / c2  # DIoU
+            elif CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
+                v = (4 / math.pi ** 2) * torch.pow(torch.atan((box2_xmax - box2_xmin) / (box2_ymax - box2_ymin)) - \
+                    torch.atan((box1_xmax - box1_xmin) / (box1_ymax - box1_ymin)), 2)
+                with torch.no_grad():
+                    alpha = v / (v - iou + (1 + eps))
+                return iou - (rho2 / c2 + v * alpha)  # CIoU
+        else:  # GIoU https://arxiv.org/pdf/1902.09630.pdf
+            c_area = cw * ch + eps  # convex area
+            return iou - (c_area - union_area) / c_area  # GIoU
+    else:
+        return iou
 
 
 def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
@@ -136,7 +206,7 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
         tmp_boxes = np.empty(shape=(0, 6))
         for idx in range(1, boxes.shape[0]):
             tmp_box = np.expand_dims(boxes[idx], axis=0)
-            if tmp_box[0][-1] != chosen_box[0][-1] or intersection_over_union_numpy(chosen_box[..., :4], tmp_box[..., :4]) < iou_threshold:
+            if tmp_box[0][-1] != chosen_box[0][-1] or bbox_iou(chosen_box[..., :4], tmp_box[..., :4]) < iou_threshold:
                 tmp_boxes = np.append(tmp_boxes, tmp_box, axis=0)
         boxes = tmp_boxes
 
@@ -178,7 +248,7 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
             tmp_box = boxes[idx:idx+1, ...]
             if tmp_box[0][-1] != chosen_box[0][-1]:
                 tmp_boxes.append(tmp_box[0])
-            elif torch.lt(intersection_over_union(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
+            elif torch.lt(bbox_iou(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
                 tmp_boxes.append(tmp_box[0])
                 
         if tmp_boxes:
@@ -245,60 +315,60 @@ def decode_predictions(input, num_classes, scaled_anchors, input_size):
     return output
 
 
-def encode_target(target, num_classes, scaled_anchors, input_size):
-    """Decode YoloV2 Ground Truth to YoloV2 Predictions shape
+# def encode_target(target, num_classes, scaled_anchors, input_size):
+#     """Decode YoloV2 Ground Truth to YoloV2 Predictions shape
 
-    Arguments:
-        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
-        num_classes (int): Number of classes in the dataset
-        scaled_anchors (List): Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
-        input_size (int): Input Size of Image
+#     Arguments:
+#         target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+#         num_classes (int): Number of classes in the dataset
+#         scaled_anchors (List): Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
+#         input_size (int): Input Size of Image
     
-    Retruns:
-        Tensor: encoded target, specified as [batch_size, num_anchors*(5+num_classes), input_size/32, input_size/32]
-    """
-    batch_size = target.size(0)
-    num_anchors = len(scaled_anchors)
-    layer_h = int(input_size / 32)
-    layer_w = int(input_size / 32)
+#     Retruns:
+#         Tensor: encoded target, specified as [batch_size, num_anchors*(5+num_classes), input_size/32, input_size/32]
+#     """
+#     batch_size = target.size(0)
+#     num_anchors = len(scaled_anchors)
+#     layer_h = int(input_size / 32)
+#     layer_w = int(input_size / 32)
 
-    tx = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-    ty = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-    tw = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-    th = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-    tconf = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-    tcls = torch.zeros(batch_size, num_anchors, layer_h, layer_w, num_classes)
+#     tx = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+#     ty = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+#     tw = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+#     th = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+#     tconf = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+#     tcls = torch.zeros(batch_size, num_anchors, layer_h, layer_w, num_classes)
 
-    for b in torch.arange(batch_size):
-        for t in torch.arange(target.size(1)):
-            if target[b, t].sum() <= 0:
-                continue
-            gx = target[b, t, 0] * layer_w
-            gy = target[b, t, 1] * layer_h
-            gw = target[b, t, 2] * layer_w
-            gh = target[b, t, 3] * layer_h
-            gi = int(gx)
-            gj = int(gy)
+#     for b in torch.arange(batch_size):
+#         for t in torch.arange(target.size(1)):
+#             if target[b, t].sum() <= 0:
+#                 continue
+#             gx = target[b, t, 0] * layer_w
+#             gy = target[b, t, 1] * layer_h
+#             gw = target[b, t, 2] * layer_w
+#             gh = target[b, t, 3] * layer_h
+#             gi = int(gx)
+#             gj = int(gy)
 
-            gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
-            anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
+#             gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
+#             anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
 
-            calc_iou = intersection_over_union(gt_box, anchors_box) # [num_anchors, 1]
-            calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
+#             calc_iou = bbox_iou(gt_box, anchors_box) # [num_anchors, 1]
+#             calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
             
-            best_n = torch.argmax(calc_iou)
-            tx[b, best_n, gj, gi] = gx - gi
-            ty[b, best_n, gj, gi] = gy - gj
-            tw[b, best_n, gj, gi] = torch.log(gw/scaled_anchors[best_n][0] + 1e-16)
-            th[b, best_n, gj, gi] = torch.log(gh/scaled_anchors[best_n][1] + 1e-16)
-            tconf[b, best_n, gj, gi] = 1
-            tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
+#             best_n = torch.argmax(calc_iou)
+#             tx[b, best_n, gj, gi] = gx - gi
+#             ty[b, best_n, gj, gi] = gy - gj
+#             tw[b, best_n, gj, gi] = torch.log(gw/scaled_anchors[best_n][0] + 1e-16)
+#             th[b, best_n, gj, gi] = torch.log(gh/scaled_anchors[best_n][1] + 1e-16)
+#             tconf[b, best_n, gj, gi] = 1
+#             tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
     
-    output = torch.cat([tx, ty, tw, th, tconf, tcls], -1) # [batch_size, num_anchors, layer_h, layer_w, 5(tx, ty, tw, th, tconf) + num_classes]
-    output = output.permute(0, 1, 4, 2, 3).contiguous().view(batch_size, -1, layer_h, layer_w) # [batch_size, num_anchors*(5(tx, ty, tw, th, tconf) + num_classes), layer_h, layer_w]
-    if target.is_cuda:
-        output = output.cuda()
-    return output  
+#     output = torch.cat([tx, ty, tw, th, tconf, tcls], -1) # [batch_size, num_anchors, layer_h, layer_w, 5(tx, ty, tw, th, tconf) + num_classes]
+#     output = output.permute(0, 1, 4, 2, 3).contiguous().view(batch_size, -1, layer_h, layer_w) # [batch_size, num_anchors*(5(tx, ty, tw, th, tconf) + num_classes), layer_h, layer_w]
+#     if target.is_cuda:
+#         output = output.cuda()
+#     return output  
 
 
 def decode_target(input, num_classes, scaled_anchors, input_size):
@@ -474,7 +544,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
             best_iou = 0
 
             for idx, gt in enumerate(ground_truth_img):
-                iou = intersection_over_union(detection[1:5], gt[1:5])
+                iou = bbox_iou(detection[1:5], gt[1:5])
 
                 if iou > best_iou:
                     best_iou = iou
@@ -677,9 +747,9 @@ if __name__ == '__main__':
     y_pred_tensor = torch.as_tensor(y_pred)
     print(f'{y_pred_tensor.size()}, {y_pred_tensor.dtype}')
     
-    encode = encode_target(y_true_tensor, num_classes, scaled_anchors, input_size)
-    decode_true = decode_predictions(encode, num_classes, scaled_anchors, input_size)
-    print(f'Decode Truth\n{decode_true}\n{decode_true.size()}\n')
+    # encode = encode_target(y_true_tensor, num_classes, scaled_anchors, input_size)
+    # decode_true = decode_predictions(encode, num_classes, scaled_anchors, input_size)
+    # print(f'Decode Truth\n{decode_true}\n{decode_true.size()}\n')
 
     # Decode Prediction Test
     decode_pred = decode_predictions(y_pred_tensor, num_classes, scaled_anchors, input_size)
@@ -689,11 +759,11 @@ if __name__ == '__main__':
     boxes_pred = non_max_suppression(decode_pred[0], conf_threshold=0.5)
     print(f'NMS Pred\n{boxes_pred}\n{boxes_pred.size()}\n')
 
-    boxes_true = non_max_suppression(decode_true[0], conf_threshold=0.5)
-    print(f'NMS Truth\n{boxes_true}\n{boxes_true.size()}\n')
+    # boxes_true = non_max_suppression(decode_true[0], conf_threshold=0.5)
+    # print(f'NMS Truth\n{boxes_true}\n{boxes_true.size()}\n')
 
-    iou = intersection_over_union(boxes_pred[0, :4], boxes_true[0, :4])
-    print(iou)
+    # iou = bbox_iou(boxes_pred[0, :4], boxes_true[0, :4])
+    # print(iou)
 
     # mAP Test
     map_metric = MeanAveragePrecision(num_classes, scaled_anchors, input_size)

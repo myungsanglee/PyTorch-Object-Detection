@@ -1,10 +1,8 @@
-from matplotlib.pyplot import sca
 import pytorch_lightning as pl
 
 from utils.module_select import get_optimizer, get_scheduler
 from models.loss.yolov2_loss import YoloV2Loss
 from dataset.detection.yolov2_utils import MeanAveragePrecision
-from module.lr_scheduler import YoloLR
 
 
 class YoloV2Detector(pl.LightningModule):

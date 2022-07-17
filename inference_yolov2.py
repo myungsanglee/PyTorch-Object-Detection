@@ -10,7 +10,7 @@ import timm
 from utils.yaml_helper import get_configs
 from module.yolov2_detector import YoloV2Detector
 from models.detector.yolov2 import YoloV2
-from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2, encode_target, decode_target, non_max_suppression
+from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2, get_target_boxes
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from utils.module_select import get_model
 
@@ -71,12 +71,10 @@ def inference(cfg, ckpt):
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        true_pred = encode_target(batch_y, cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'])
-        true_boxes = decode_target(true_pred, cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'])[0]
-        true_boxes = true_boxes[torch.where(true_boxes[..., 4] > 0)[0]]
+        # true_boxes = get_target_boxes(batch_y, 416)
 
         tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
-        tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
+        # tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('test', tagged_img)
         key = cv2.waitKey(0)

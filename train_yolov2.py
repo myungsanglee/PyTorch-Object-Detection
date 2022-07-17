@@ -17,19 +17,6 @@ from utils.module_select import get_model
 from utils.yaml_helper import get_configs
 
 
-def add_experimental_callbacks(cfg, train_callbacks):
-    options = {
-        'SWA': StochasticWeightAveraging(),
-        'QAT': QuantizationAwareTraining()
-    }
-    callbacks = cfg['experimental_options']['callbacks']
-    if callbacks:
-        for option in callbacks:
-            train_callbacks.append(options[option])
-
-    return train_callbacks
-
-
 def train(cfg):
     data_module = YoloV2DataModule(
         train_list=cfg['train_list'], 
@@ -61,13 +48,12 @@ def train(cfg):
             save_last=True,
             every_n_epochs=cfg['save_freq']
         ),
-        # EarlyStopping(
-        #     monitor='val_loss',
-        #     patience=10
-        # )
+        EarlyStopping(
+            monitor='val_loss',
+            patience=10,
+            verbose=True
+        )
     ]
-
-    # callbacks = add_expersimental_callbacks(cfg, callbacks)
 
     trainer = pl.Trainer(
         max_epochs=cfg['epochs'],
