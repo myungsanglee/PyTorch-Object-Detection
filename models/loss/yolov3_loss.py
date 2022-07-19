@@ -146,17 +146,17 @@ class YoloV3Loss(nn.Module):
                 calc_iou = bbox_iou(gt_box, anchors_box, x1y1x2y2=True) # [num_anchors, 1]
                 calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
                 
-                # checking iou
-                check_iou = torch.where(calc_iou > ignore_threshold)[0]
-                if check_iou.size(0):
-                    noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
-                    best_n = torch.argmax(calc_iou)
-                    mask[b, best_n, gj, gi] = 1
-                    tx[b, best_n, gj, gi] = gx - gi
-                    ty[b, best_n, gj, gi] = gy - gj
-                    tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
-                    th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
-                    tconf[b, best_n, gj, gi] = 1
-                    tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
+                # # checking iou
+                # check_iou = torch.where(calc_iou > ignore_threshold)[0]
+                # if check_iou.size(0):
+                noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
+                best_n = torch.argmax(calc_iou)
+                mask[b, best_n, gj, gi] = 1
+                tx[b, best_n, gj, gi] = gx - gi
+                ty[b, best_n, gj, gi] = gy - gj
+                tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
+                th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
+                tconf[b, best_n, gj, gi] = 1
+                tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
