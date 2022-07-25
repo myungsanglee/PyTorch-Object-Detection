@@ -57,7 +57,7 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = A.Compose([
             A.HorizontalFlip(),
-            A.ChannelShuffle(),
+            # A.ChannelShuffle(),
             A.CLAHE(),
             A.ColorJitter(
                 brightness=0.5,
