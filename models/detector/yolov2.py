@@ -8,6 +8,7 @@ import torchsummary
 
 from utils.module_select import get_model
 from models.layers.conv_block import Conv2dBnRelu
+from models.initialize import weight_initialize
 
 
 class YoloV2(nn.Module):
@@ -34,6 +35,10 @@ class YoloV2(nn.Module):
         )
 
         self.dropout = nn.Dropout2d(0.5)
+
+        weight_initialize(self.b4_layer)
+        weight_initialize(self.b5_layer)
+        weight_initialize(self.yolov2_head)
 
     def forward(self, x):
         # backbone forward

@@ -6,6 +6,7 @@ from torch import nn
 import torchsummary
 
 from models.layers.conv_block import Conv2dBnRelu
+from models.initialize import weight_initialize
 
 
 class _Darknet19(nn.Module):
@@ -94,6 +95,7 @@ class _Darknet19(nn.Module):
 
 def darknet19(num_classes=1000, in_channels=3):
     model = _Darknet19(num_classes, in_channels)
+    weight_initialize(model)
     return model
 
 
