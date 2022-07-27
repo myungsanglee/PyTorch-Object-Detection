@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from dataset.detection.yolov3_utils import bbox_iou
+from models.loss.focal_loss import FocalLoss
 
 
 class YoloV3Loss(nn.Module):
@@ -34,6 +35,7 @@ class YoloV3Loss(nn.Module):
 
         self.mse_loss = nn.MSELoss(reduction='mean')
         self.bce_loss = nn.BCELoss(reduction='mean')
+        self.fc_loss = FocalLoss(reduction='mean')
 
     def forward(self, input, target):
         """
@@ -89,7 +91,7 @@ class YoloV3Loss(nn.Module):
         # ================== #
         #   FOR CLASS LOSS   #
         # ================== #
-        class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
+        class_loss = self.lambda_class * self.fc_loss(pred_cls[mask==1], tcls[mask==1])
 
         loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
 
