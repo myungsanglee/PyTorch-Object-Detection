@@ -88,7 +88,8 @@ class YoloV2Loss(nn.Module):
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+        # loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+        loss = (box_loss + object_loss + no_object_loss + class_loss)
 
         return loss
 
@@ -145,7 +146,6 @@ class YoloV2Loss(nn.Module):
                 
                 noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
                 best_n = torch.argmax(calc_iou)
-                noobj_mask[b, best_n, gj, gi] = 0
                 mask[b, best_n, gj, gi] = 1
                 tx[b, best_n, gj, gi] = gx - gi
                 ty[b, best_n, gj, gi] = gy - gj
