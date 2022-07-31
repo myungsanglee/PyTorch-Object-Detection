@@ -143,7 +143,7 @@ class YoloV2Loss(nn.Module):
                 calc_iou = bbox_iou(gt_box, anchors_box, x1y1x2y2=True) # [num_anchors, 1]
                 calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
                 
-                # noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
+                noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
                 best_n = torch.argmax(calc_iou)
                 noobj_mask[b, best_n, gj, gi] = 0
                 mask[b, best_n, gj, gi] = 1
