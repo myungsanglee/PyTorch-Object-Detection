@@ -57,7 +57,7 @@ class YoloV2(nn.Module):
 
         x = torch.cat((b4, b5), 1)
 
-        x = self.dropout(x)
+        # x = self.dropout(x)
 
         # prediction
         predictions = self.yolov2_head(x)

@@ -88,8 +88,7 @@ class YoloV2Loss(nn.Module):
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        # loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
-        loss = (box_loss + object_loss + no_object_loss + class_loss)
+        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
 
         return loss
 
