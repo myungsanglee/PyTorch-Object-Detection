@@ -57,6 +57,10 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = A.Compose([
             A.HorizontalFlip(),
+            A.RandomBrightness(),
+            A.GaussNoise(var_limit=(100, 150)),
+            A.MotionBlur(blur_limit=17),
+            A.RGBShift(),
             A.ChannelShuffle(),
             A.CLAHE(),
             A.ColorJitter(
@@ -68,13 +72,13 @@ class YoloV2DataModule(pl.LightningDataModule):
             A.RandomResizedCrop(self.input_size, self.input_size, (0.3, 1)),
             A.Normalize(0, 1),
             ToTensorV2(),
-        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
+        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
 
         valid_transform = A.Compose([
             A.Resize(self.input_size, self.input_size, always_apply=True),
             A.Normalize(0, 1),
             ToTensorV2(),
-        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
+        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
         
         self.train_dataset = YoloV2Dataset(
             train_transforms, 
