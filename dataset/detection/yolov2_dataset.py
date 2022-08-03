@@ -57,25 +57,23 @@ class YoloV2DataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         train_transforms = A.Compose([
             A.HorizontalFlip(),
-            A.RandomBrightness(),
             A.GaussNoise(var_limit=(100, 150)),
-            A.MotionBlur(blur_limit=17),
             A.RGBShift(),
-            A.ChannelShuffle(),
             A.CLAHE(),
             A.ColorJitter(
                 brightness=0.5,
                 contrast=0.2,
                 saturation=0.5,
-                hue=0.1
+                hue=0.1,
+                p=1
             ),
-            A.RandomResizedCrop(self.input_size, self.input_size, (0.3, 1)),
+            A.RandomResizedCrop(self.input_size, self.input_size, (0.08, 1)),
             A.Normalize(0, 1),
             ToTensorV2(),
         ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
 
         valid_transform = A.Compose([
-            A.Resize(self.input_size, self.input_size, always_apply=True),
+            A.Resize(self.input_size, self.input_size),
             A.Normalize(0, 1),
             ToTensorV2(),
         ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
@@ -120,26 +118,27 @@ if __name__ == '__main__':
 
     train_transforms = A.Compose([
         # A.HorizontalFlip(),
-        A.ChannelShuffle(p=1),
-        # A.Blur(),
-        # A.GaussNoise(),
-        # A.CLAHE(),
+        # A.GaussNoise(var_limit=(100, 150), p=1),
+        # A.RGBShift(p=1),
+        # A.CLAHE(p=1),
         # A.ColorJitter(
         #     brightness=0.5,
         #     contrast=0.2,
         #     saturation=0.5,
-        #     hue=0.1
+        #     hue=0.1,
+        #     p=1
         # ),
-        A.RandomResizedCrop(input_size, input_size, (1, 1)),
+        A.RandomResizedCrop(input_size, input_size, (0.08, 1)),
+        # A.Resize(input_size, input_size, always_apply=True),
         A.Normalize(0, 1),
         ToTensorV2(),
-    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
+    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
 
     valid_transform = A.Compose([
         A.Resize(input_size, input_size, always_apply=True),
         A.Normalize(0, 1),
         ToTensorV2(),
-    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.1))
+    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
     
     train_dataset = YoloV2Dataset(
         train_transforms, 

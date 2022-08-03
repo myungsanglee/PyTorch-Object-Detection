@@ -609,7 +609,7 @@ def get_tagged_img(img, boxes, names_path, color):
                           fontFace=cv2.FONT_HERSHEY_PLAIN,
                           fontScale=1,
                           color=color)
-
+    print(f'')
     return img
 
 def get_tagged_img_2(img, boxes, names_path, color):
