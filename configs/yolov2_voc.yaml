@@ -50,7 +50,7 @@ optimizer_options:
   lr: 1e-3
   momentum: 0.9
   weight_decay: 5e-4
-  nesterov: False
+  nesterov: True
 
 # scheduler: 'multi_step'
 # scheduler_options:

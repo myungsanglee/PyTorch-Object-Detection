@@ -64,8 +64,8 @@ class YoloV2DataModule(pl.LightningDataModule):
                 brightness=0.5,
                 contrast=0.2,
                 saturation=0.5,
-                hue=0.1
-                # p=1
+                hue=0.1,
+                p=1
             ),
             A.RandomResizedCrop(self.input_size, self.input_size, (0.3, 1)),
             A.Normalize(0, 1),
