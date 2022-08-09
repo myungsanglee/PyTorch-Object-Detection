@@ -8,6 +8,11 @@ from torch import nn
 from dataset.detection.yolov2_utils import bbox_iou
 
 
+def smooth_BCE(eps=0.1):
+    # return positive, negative label smoothing BCE targets
+    return 1.0 - 0.5 * eps, 0.5 * eps
+
+
 class YoloV2Loss(nn.Module):
     """YoloV2 Loss Function
 
@@ -30,8 +35,10 @@ class YoloV2Loss(nn.Module):
         
         self.ignore_threshold = 0.5
         
-        self.mse_loss = nn.MSELoss(reduction='mean')
-        self.bce_loss = nn.BCELoss(reduction='mean')
+        self.mse_loss = nn.MSELoss(reduction='sum')
+        self.bce_loss = nn.BCELoss(reduction='sum')
+        
+        # self.positive_class_target, self.negative_class_target = smooth_BCE()
 
     def forward(self, input, target):
         """
@@ -50,6 +57,8 @@ class YoloV2Loss(nn.Module):
         y = torch.sigmoid(prediction[..., 1])
         w = torch.exp(prediction[..., 2])
         h = torch.exp(prediction[..., 3])
+        # w = (torch.sigmoid(prediction[..., 2]) * 2 ) ** 2
+        # h = (torch.sigmoid(prediction[..., 3]) * 2) ** 2
         conf = torch.sigmoid(prediction[..., 4])
         pred_cls = torch.sigmoid(prediction[..., 5:])
         
@@ -76,19 +85,20 @@ class YoloV2Loss(nn.Module):
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.lambda_obj * self.bce_loss(conf * mask, tconf)
+        object_loss = self.lambda_obj * self.mse_loss(conf * mask, tconf)
 
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.lambda_noobj * self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
+        no_object_loss = self.lambda_noobj * self.mse_loss(conf * noobj_mask, noobj_mask * 0.0)
 
         # ================== #
         #   FOR CLASS LOSS   #
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
-        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+
+        loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
 
         return loss
 
@@ -153,5 +163,9 @@ class YoloV2Loss(nn.Module):
                 tconf[b, best_n, gj, gi] = 1
                 tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
+                # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf
+                # tcls[b, best_n, gj, gi, :] = self.negative_class_target
+                # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
+
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
 

@@ -75,39 +75,6 @@ def collater(data):
 #     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
 
 
-# def intersection_over_union(boxes1, boxes2):
-#     """Calculation of intersection-over-union
-
-#     Arguments:
-#         boxes1 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
-#         boxes2 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
-
-#     Returns:
-#         Tensor: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
-#     """
-
-#     box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
-#     box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
-#     box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
-#     box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
-
-#     box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
-#     box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
-#     box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
-#     box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
-
-#     inter_xmin = torch.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
-#     inter_ymin = torch.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
-#     inter_xmax = torch.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
-#     inter_ymax = torch.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
-
-#     inter_area = torch.clamp((inter_xmax - inter_xmin), 0) * torch.clamp((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
-#     box1_area = torch.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
-#     box2_area = torch.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
-
-#     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
-
-
 def bbox_iou(boxes1, boxes2, x1y1x2y2=False, GIoU=False, DIoU=False, CIoU=False, eps=1e-6):
     """Calculation of intersection-over-union
 
@@ -308,118 +275,9 @@ def decode_predictions(input, num_classes, scaled_anchors, input_size):
     pred_boxes[..., 1] = y + grid_y
     pred_boxes[..., 2] = torch.exp(w) * anchor_w
     pred_boxes[..., 3] = torch.exp(h) * anchor_h
-    # Results
-    _scale = FloatTensor([stride_w, stride_h] * 2)
-    output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
-    
-    return output
+    # pred_boxes[..., 2] = ((torch.sigmoid(w) * 2) ** 2) * anchor_w
+    # pred_boxes[..., 3] = ((torch.sigmoid(h) * 2) ** 2) * anchor_h
 
-
-# def encode_target(target, num_classes, scaled_anchors, input_size):
-#     """Decode YoloV2 Ground Truth to YoloV2 Predictions shape
-
-#     Arguments:
-#         target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
-#         num_classes (int): Number of classes in the dataset
-#         scaled_anchors (List): Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
-#         input_size (int): Input Size of Image
-    
-#     Retruns:
-#         Tensor: encoded target, specified as [batch_size, num_anchors*(5+num_classes), input_size/32, input_size/32]
-#     """
-#     batch_size = target.size(0)
-#     num_anchors = len(scaled_anchors)
-#     layer_h = int(input_size / 32)
-#     layer_w = int(input_size / 32)
-
-#     tx = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-#     ty = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-#     tw = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-#     th = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-#     tconf = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
-#     tcls = torch.zeros(batch_size, num_anchors, layer_h, layer_w, num_classes)
-
-#     for b in torch.arange(batch_size):
-#         for t in torch.arange(target.size(1)):
-#             if target[b, t].sum() <= 0:
-#                 continue
-#             gx = target[b, t, 0] * layer_w
-#             gy = target[b, t, 1] * layer_h
-#             gw = target[b, t, 2] * layer_w
-#             gh = target[b, t, 3] * layer_h
-#             gi = int(gx)
-#             gj = int(gy)
-
-#             gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
-#             anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
-
-#             calc_iou = bbox_iou(gt_box, anchors_box) # [num_anchors, 1]
-#             calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
-            
-#             best_n = torch.argmax(calc_iou)
-#             tx[b, best_n, gj, gi] = gx - gi
-#             ty[b, best_n, gj, gi] = gy - gj
-#             tw[b, best_n, gj, gi] = torch.log(gw/scaled_anchors[best_n][0] + 1e-16)
-#             th[b, best_n, gj, gi] = torch.log(gh/scaled_anchors[best_n][1] + 1e-16)
-#             tconf[b, best_n, gj, gi] = 1
-#             tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
-    
-#     output = torch.cat([tx, ty, tw, th, tconf, tcls], -1) # [batch_size, num_anchors, layer_h, layer_w, 5(tx, ty, tw, th, tconf) + num_classes]
-#     output = output.permute(0, 1, 4, 2, 3).contiguous().view(batch_size, -1, layer_h, layer_w) # [batch_size, num_anchors*(5(tx, ty, tw, th, tconf) + num_classes), layer_h, layer_w]
-#     if target.is_cuda:
-#         output = output.cuda()
-#     return output  
-
-
-def decode_target(input, num_classes, scaled_anchors, input_size):
-    """decodes encode_target
-    
-    Convert predictions to boundig boxes info
-
-    Arguments:
-        input (Tensor): predictions of the YOLO v2 model with shape  '(batch, num_anchors*(5 + num_classes), 13, 13)'
-        num_classes: Number of classes in the dataset
-        scaled_anchors: Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
-        input_size: input size of Image
-
-    Returns:
-        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-    """
-    batch_size, _, layer_h, layer_w = input.size()
-    num_anchors = len(scaled_anchors)
-    stride_h = input_size / layer_h
-    stride_w = input_size / layer_w
-    # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
-    prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-
-    x = prediction[..., 0]
-    y = prediction[..., 1]
-    w = prediction[..., 2]
-    h = prediction[..., 3]
-    conf = prediction[..., 4]
-    pred_cls = prediction[..., 5:]
-
-    pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
-    pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
-
-    FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-    LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-    # Calculate offsets for each grid
-    grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
-        batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
-    grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
-        batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
-    # Calculate anchor w, h
-    anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
-    anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-    anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
-    anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
-    # Add offset and scale with anchors
-    pred_boxes = FloatTensor(prediction[..., :4].size())
-    pred_boxes[..., 0] = x + grid_x
-    pred_boxes[..., 1] = y + grid_y
-    pred_boxes[..., 2] = torch.exp(w) * anchor_w
-    pred_boxes[..., 3] = torch.exp(h) * anchor_h
     # Results
     _scale = FloatTensor([stride_w, stride_h] * 2)
     output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
@@ -681,21 +539,17 @@ class MeanAveragePrecision:
         self._img_idx = 0
 
     def update_state(self, y_true, y_pred):
-        # y_true = encode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
-        # true_boxes = decode_target(y_true, self._num_classes, self._scaled_anchors, self._input_size)
         true_boxes = get_target_boxes_for_map(y_true, self._input_size)
 
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
-            pred_nms = non_max_suppression(pred_boxes[idx])
+            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=0.25)
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()
             pred_concat = torch.concat([pred_img_idx, pred_nms], dim=1)
 
-            # true_box = true_boxes[idx]
-            # true_nms = true_box[torch.where(true_box[..., 4] > 0)[0]]
             true_nms = true_boxes[int(idx)]
             true_nms = true_nms.cuda()
 

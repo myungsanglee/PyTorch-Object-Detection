@@ -1,13 +1,11 @@
 import argparse
 import platform
-import os
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
 import torchsummary
-import timm
 
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from module.yolov2_detector import YoloV2Detector
