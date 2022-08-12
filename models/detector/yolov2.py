@@ -30,7 +30,6 @@ class YoloV2(nn.Module):
         
         self.yolov2_head = nn.Sequential(
             Conv2dBnRelu(1280, 1024, 3),
-            
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 

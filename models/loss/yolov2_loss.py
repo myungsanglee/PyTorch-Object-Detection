@@ -35,8 +35,8 @@ class YoloV2Loss(nn.Module):
         
         self.ignore_threshold = 0.5
         
-        self.mse_loss = nn.MSELoss(reduction='sum')
-        self.bce_loss = nn.BCELoss(reduction='sum')
+        self.mse_loss = nn.MSELoss(reduction='mean')
+        self.bce_loss = nn.BCELoss(reduction='mean')
         
         # self.positive_class_target, self.negative_class_target = smooth_BCE()
 
@@ -50,17 +50,24 @@ class YoloV2Loss(nn.Module):
             loss (float): total loss values
         """
         batch_size, _, layer_h, layer_w = input.size()
+        
         # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
         prediction = input.view(batch_size, len(self.scaled_anchors), -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
 
-        x = torch.sigmoid(prediction[..., 0])
-        y = torch.sigmoid(prediction[..., 1])
-        w = torch.exp(prediction[..., 2])
-        h = torch.exp(prediction[..., 3])
-        # w = (torch.sigmoid(prediction[..., 2]) * 2 ) ** 2
-        # h = (torch.sigmoid(prediction[..., 3]) * 2) ** 2
-        conf = torch.sigmoid(prediction[..., 4])
-        pred_cls = torch.sigmoid(prediction[..., 5:])
+        # Calculate anchor w, h
+        FloatTensor = torch.cuda.FloatTensor if prediction.is_cuda else torch.FloatTensor
+        LongTensor = torch.cuda.LongTensor if prediction.is_cuda else torch.LongTensor
+        anchor_w = FloatTensor(self.scaled_anchors).index_select(1, LongTensor([0]))
+        anchor_h = FloatTensor(self.scaled_anchors).index_select(1, LongTensor([1]))
+        anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(batch_size, len(self.scaled_anchors), layer_h, layer_w)
+        anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(batch_size, len(self.scaled_anchors), layer_h, layer_w)
+
+        px = torch.sigmoid(prediction[..., 0])
+        py = torch.sigmoid(prediction[..., 1])
+        pw = torch.exp(prediction[..., 2]) * anchor_w
+        ph = torch.exp(prediction[..., 3]) * anchor_h
+        pconf = torch.sigmoid(prediction[..., 4])
+        pcls = torch.sigmoid(prediction[..., 5:])
         
         mask, noobj_mask, tx, ty, tw, th, tconf, tcls = self.encode_target(target, self.num_classes, self.scaled_anchors, layer_w, layer_h, self.ignore_threshold)
         if prediction.is_cuda:
@@ -76,29 +83,33 @@ class YoloV2Loss(nn.Module):
         # ============================ #
         #   FOR BOX COORDINATES Loss   #
         # ============================ #
-        loss_x = self.mse_loss(x * mask, tx * mask)
-        loss_y = self.mse_loss(y * mask, ty * mask)
-        loss_w = self.mse_loss(w * mask, tw * mask)
-        loss_h = self.mse_loss(h * mask, th * mask)
+        loss_x = self.mse_loss(px * mask, tx * mask)
+        loss_y = self.mse_loss(py * mask, ty * mask)
+        loss_w = self.mse_loss(pw * mask, tw * mask)
+        loss_h = self.mse_loss(ph * mask, th * mask)
         box_loss = self.lambda_coord * (loss_x + loss_y + loss_w + loss_h)
+        # print(f'box_loss: {box_loss}')
 
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.lambda_obj * self.mse_loss(conf * mask, tconf)
-
+        object_loss = self.lambda_obj * self.bce_loss(pconf * mask, tconf)
+        # print(f'object_loss: {object_loss}')
+        
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.lambda_noobj * self.mse_loss(conf * noobj_mask, noobj_mask * 0.0)
-
+        no_object_loss = self.lambda_noobj * self.bce_loss(pconf * noobj_mask, noobj_mask * 0)
+        # print(f'no_object_loss: {no_object_loss}')
+        
         # ================== #
         #   FOR CLASS LOSS   #
         # ================== #
-        class_loss = self.lambda_class * self.bce_loss(pred_cls[mask==1], tcls[mask==1])
+        class_loss = self.lambda_class * self.bce_loss(pcls[mask==1], tcls[mask==1])
+        # class_loss = self.lambda_class * self.bce_loss(pred_cls * mask.unsqueeze(dim=-1), tcls * mask.unsqueeze(dim=-1))
+        # print(f'class_loss: {class_loss}\n')
 
-
-        loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
+        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
 
         return loss
 
@@ -158,8 +169,10 @@ class YoloV2Loss(nn.Module):
                 mask[b, best_n, gj, gi] = 1
                 tx[b, best_n, gj, gi] = gx - gi
                 ty[b, best_n, gj, gi] = gy - gj
-                tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
-                th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
+                # tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
+                # th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
+                tw[b, best_n, gj, gi] = gw
+                th[b, best_n, gj, gi] = gh
                 tconf[b, best_n, gj, gi] = 1
                 tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
@@ -169,3 +182,145 @@ class YoloV2Loss(nn.Module):
 
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
 
+
+class YoloV2LossV2(nn.Module):
+    """YoloV2 Loss Function
+
+    Arguments:
+      num_classes (int): Number of classes in the dataset
+      scaled_anchors (List): Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
+    """
+    
+    def __init__(self, num_classes, scaled_anchors):
+        super().__init__()
+        self.num_classes = num_classes
+        self.scaled_anchors = scaled_anchors
+
+        # These are from Yolo paper, signifying how much we should
+        # pay loss for no object (noobj) and the box coordinates (coord)
+        self.lambda_obj = 10
+        self.lambda_noobj = 1
+        self.lambda_coord = 10
+        self.lambda_class = 1
+        
+        self.ignore_threshold = 0.5
+        
+        self.mse_loss = nn.MSELoss(reduction='mean')
+        self.bce_loss = nn.BCELoss(reduction='mean')
+        
+    def forward(self, input, target):
+        """
+        Arguments:
+            input (tensor): [batch, num_anchors*(5+num_classes), 13, 13]
+            target (tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+            
+        Returns:
+            loss (float): total loss values
+        """
+        batch_size, _, layer_h, layer_w = input.size()
+        
+        # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
+        prediction = input.view(batch_size, len(self.scaled_anchors), -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
+
+        scaled_anchors = torch.FloatTensor(self.scaled_anchors).unsqueeze(dim=0)
+        scaled_anchors = scaled_anchors.repeat(batch_size, 1, 1).repeat(1, 1, layer_h*layer_w).view(batch_size, len(self.scaled_anchors), layer_h, layer_w, -1)
+        if prediction.is_cuda:
+            scaled_anchors = scaled_anchors.cuda()
+
+        pxy = torch.sigmoid(prediction[..., 0:2])
+        pwh = torch.exp(prediction[..., 2:4]) * scaled_anchors
+        pbox = torch.cat([pxy, pwh], dim=-1)
+        pconf = torch.sigmoid(prediction[..., 4:5])
+        pcls = torch.sigmoid(prediction[..., 5:])
+        
+        mask, noobj_mask, tbox, tconf, tcls = self.encode_target(target, self.num_classes, self.scaled_anchors, layer_w, layer_h, self.ignore_threshold)
+        if prediction.is_cuda:
+            mask = mask.cuda()
+            noobj_mask = noobj_mask.cuda()
+            tbox = tbox.cuda()
+            tconf = tconf.cuda()
+            tcls = tcls.cuda()
+
+        # ============================ #
+        #   FOR BOX COORDINATES Loss   #
+        # ============================ #
+        box_loss = self.lambda_coord * self.mse_loss(pbox * mask, tbox * mask)
+        print(f'box_loss_v2: {box_loss}')
+        
+        # ==================== #
+        #   FOR OBJECT LOSS    #
+        # ==================== #
+        object_loss = self.lambda_obj * self.bce_loss(pconf * mask, tconf)
+        print(f'object_loss_v2: {object_loss}')
+        
+        # ======================= #
+        #   FOR NO OBJECT LOSS    #
+        # ======================= #
+        no_object_loss = self.lambda_noobj * self.bce_loss(pconf * noobj_mask, noobj_mask * 0.0)
+        print(f'no_object_loss_v2: {no_object_loss}')
+        
+        # ================== #
+        #   FOR CLASS LOSS   #
+        # ================== #
+        class_loss = self.lambda_class * self.bce_loss(pcls[mask[..., 0]==1], tcls[mask[..., 0]==1])
+        print(f'class_loss_v2: {class_loss}')
+        
+
+        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+
+        return loss
+
+
+    def encode_target(self, target, num_classes, scaled_anchors, layer_w, layer_h, ignore_threshold):
+        """YoloV2 Loss Function
+
+        Arguments:
+            target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+            num_classes (int): Number of classes in the dataset
+            scaled_anchors (List): Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
+            layer_w (int): size of predictions width
+            layer_h (int): size of predictions height
+            ignore_threshold (float): float value of ignore iou
+        
+        Retruns:
+            mask (Tensor): Objectness Mask Tensor, [batch_size, num_anchors, layer_h, layer_w, 1]
+            noobj_mask (Tensor): No Objectness Mask Tensor, [batch_size, num_anchors, layer_h, layer_w, 1]
+            tbox (Tensor): Ground Truth Box, [batch_size, num_anchors, layer_h, layer_w, 4]
+            tconf (Tensor): Ground Truth Confidence Score, [batch_size, num_anchors, layer_h, layer_w, 1]
+            tcls (Tensor): Ground Truth Class index, [batch_size, num_anchors, layer_h, layer_w, num_classes]
+        """
+        batch_size = target.size(0)
+        num_anchors = len(scaled_anchors)
+        
+        mask = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+        noobj_mask = torch.ones(batch_size, num_anchors, layer_h, layer_w, 1)
+        tbox = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 4)
+        tconf = torch.zeros(batch_size, num_anchors, layer_h, layer_w, 1)
+        tcls = torch.zeros(batch_size, num_anchors, layer_h, layer_w, num_classes)
+
+        for b in torch.arange(batch_size):
+            for t in torch.arange(target.size(1)):
+                if target[b, t].sum() <= 0:
+                    continue
+                gx = target[b, t, 0] * layer_w
+                gy = target[b, t, 1] * layer_h
+                gw = target[b, t, 2] * layer_w
+                gh = target[b, t, 3] * layer_h
+                gi = int(gx)
+                gj = int(gy)
+
+                gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
+                anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
+
+                calc_iou = bbox_iou(gt_box, anchors_box, x1y1x2y2=True) # [num_anchors, 1]
+                calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
+                
+                noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
+                best_n = torch.argmax(calc_iou)
+                mask[b, best_n, gj, gi] = 1
+                # tbox[b, best_n, gj, gi] = torch.tensor([gx - gi, gy - gj, gw/scaled_anchors[best_n][0], gh/scaled_anchors[best_n][1]])
+                tbox[b, best_n, gj, gi] = torch.tensor([gx - gi, gy - gj, gw, gh])
+                tconf[b, best_n, gj, gi] = 1
+                tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
+
+        return mask, noobj_mask, tbox, tconf, tcls  
