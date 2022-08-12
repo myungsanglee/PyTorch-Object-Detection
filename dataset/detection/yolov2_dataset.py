@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from dataset.detection.yolov2_utils import collater, get_tagged_img, get_target_boxes, get_tagged_img_2
+from dataset.detection.yolov2_utils import collater, get_tagged_img, get_target_boxes
 
 
 class YoloV2Dataset(Dataset):
@@ -181,7 +181,7 @@ if __name__ == '__main__':
         origin_true_boxes = get_target_boxes(origin_y, 416)
         
         train_img = get_tagged_img(train_img, train_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
-        origin_img = get_tagged_img_2(origin_img, origin_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
+        origin_img = get_tagged_img(origin_img, origin_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
 
         cv2.imshow('Train', train_img)
         cv2.imshow('Original', origin_img)

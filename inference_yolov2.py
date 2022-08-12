@@ -10,7 +10,7 @@ import timm
 from utils.yaml_helper import get_configs
 from module.yolov2_detector import YoloV2Detector
 from models.detector.yolov2 import YoloV2
-from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2, get_target_boxes
+from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from utils.module_select import get_model
 
