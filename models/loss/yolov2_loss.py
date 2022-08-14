@@ -38,7 +38,7 @@ class YoloV2Loss(nn.Module):
         self.mse_loss = nn.MSELoss(reduction='mean')
         self.bce_loss = nn.BCELoss(reduction='mean')
         
-        # self.positive_class_target, self.negative_class_target = smooth_BCE()
+        self.positive_class_target, self.negative_class_target = smooth_BCE(0.01)
 
     def forward(self, input, target):
         """
@@ -79,6 +79,8 @@ class YoloV2Loss(nn.Module):
         loss_y = self.mse_loss(py * mask, ty * mask)
         loss_w = self.mse_loss(pw * mask, tw * mask)
         loss_h = self.mse_loss(ph * mask, th * mask)
+        # loss_w = self.mse_loss(torch.sqrt(pw) * mask, torch.sqrt(tw) * mask)
+        # loss_h = self.mse_loss(torch.sqrt(ph) * mask, torch.sqrt(th) * mask)
         box_loss = self.lambda_coord * (loss_x + loss_y + loss_w + loss_h)
         # print(f'box_loss: {box_loss}')
 
@@ -164,11 +166,11 @@ class YoloV2Loss(nn.Module):
                 tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
                 th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
                 tconf[b, best_n, gj, gi] = 1
-                tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
+                # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
                 # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf
-                # tcls[b, best_n, gj, gi, :] = self.negative_class_target
-                # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
+                tcls[b, best_n, gj, gi, :] = self.negative_class_target
+                tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
 
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
 
@@ -190,12 +192,14 @@ class YoloV2LossV2(nn.Module):
         # pay loss for no object (noobj) and the box coordinates (coord)
         self.lambda_obj = 10
         self.lambda_noobj = 1
-        self.lambda_coord = 0.05
+        # self.lambda_coord = 0.05
+        self.lambda_coord = 1
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
         
         # self.mse_loss = nn.MSELoss(reduction='mean')
+        self.l1_loss = nn.L1Loss(reduction='mean')
         self.bce_loss = nn.BCELoss(reduction='mean')
         
     def forward(self, input, target):
@@ -211,6 +215,8 @@ class YoloV2LossV2(nn.Module):
         
         # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
         prediction = input.view(batch_size, len(self.scaled_anchors), -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
+        
+        FloatTensor = torch.cuda.FloatTensor if prediction.is_cuda else torch.FloatTensor
         
         pxy = torch.sigmoid(prediction[..., 0:2])
         pwh = torch.exp(prediction[..., 2:4])
@@ -229,10 +235,11 @@ class YoloV2LossV2(nn.Module):
         # ============================ #
         #   FOR BOX COORDINATES Loss   #
         # ============================ #
-        box_iou = bbox_iou(pbox * mask, tbox * mask, CIoU=True)
-        box_iou = (1 - box_iou[box_iou>0]).mean()
-        box_loss = self.lambda_coord * box_iou
-
+        box_iou = bbox_iou(pbox * mask, tbox * mask, DIoU=True, CIoU=False)
+        # print(f'box_iou: \n{box_iou[box_iou > 0]}')
+        box_loss = self.lambda_coord * self.l1_loss(box_iou, torch.ones(box_iou.size()).type(FloatTensor) * mask)
+        # print(f'box_loss: {box_loss}')
+        
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
@@ -249,7 +256,6 @@ class YoloV2LossV2(nn.Module):
         #   FOR CLASS LOSS   #
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pcls[mask.squeeze(dim=-1)==1], tcls[mask.squeeze(dim=-1)==1])
-        # class_loss = self.lambda_class * self.bce_loss(pred_cls * mask.unsqueeze(dim=-1), tcls * mask.unsqueeze(dim=-1))
         # print(f'class_loss: {class_loss}\n')
 
         loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size

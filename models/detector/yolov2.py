@@ -33,7 +33,7 @@ class YoloV2(nn.Module):
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 
-        self.dropout = nn.Dropout2d(0.3)
+        self.dropout = nn.Dropout2d(0.5)
 
         # weight_initialize(self.b4_layer)
         # weight_initialize(self.b5_layer)
@@ -54,11 +54,11 @@ class YoloV2(nn.Module):
 
         b5 = self.b5_layer(b5)
 
-        b4 = self.dropout(b4)
-        b5 = self.dropout(b5)
+        # b4 = self.dropout(b4)
+        # b5 = self.dropout(b5)
         x = torch.cat((b4, b5), 1)
 
-        # x = self.dropout(x)
+        x = self.dropout(x)
 
         # prediction
         predictions = self.yolov2_head(x)
