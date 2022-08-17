@@ -74,5 +74,5 @@ optimizer_options:
 scheduler: 'yolo_lr'
 scheduler_options:
   burn_in: 1000
-  steps: [40000, 60000]
-  scales: [0.1, 0.1]
+  steps: [40000]
+  scales: [0.1]
