@@ -30,15 +30,15 @@ class YoloV2Loss(nn.Module):
         # pay loss for no object (noobj) and the box coordinates (coord)
         self.lambda_obj = 20
         self.lambda_noobj = 1
-        self.lambda_coord = 20
+        self.lambda_coord = 10
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
         
-        self.mse_loss = nn.MSELoss(reduction='sum')
-        self.bce_loss = nn.BCELoss(reduction='sum')
+        self.mse_loss = nn.MSELoss(reduction='mean')
+        self.bce_loss = nn.BCELoss(reduction='mean')
         
-        self.positive_class_target, self.negative_class_target = smooth_BCE(0.01)
+        # self.positive_class_target, self.negative_class_target = smooth_BCE(0.01)
 
     def forward(self, input, target):
         """
@@ -87,13 +87,13 @@ class YoloV2Loss(nn.Module):
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.lambda_obj * self.mse_loss(pconf * mask, tconf)
+        object_loss = self.lambda_obj * self.bce_loss(pconf * mask, tconf)
         # print(f'object_loss: {object_loss}')
         
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.lambda_noobj * self.mse_loss(pconf * noobj_mask, noobj_mask * 0)
+        no_object_loss = self.lambda_noobj * self.bce_loss(pconf * noobj_mask, noobj_mask * 0)
         # print(f'no_object_loss: {no_object_loss}')
         
         # ================== #
@@ -103,7 +103,7 @@ class YoloV2Loss(nn.Module):
         # class_loss = self.lambda_class * self.bce_loss(pred_cls * mask.unsqueeze(dim=-1), tcls * mask.unsqueeze(dim=-1))
         # print(f'class_loss: {class_loss}\n')
 
-        loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
+        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
 
         return loss
 
@@ -166,11 +166,11 @@ class YoloV2Loss(nn.Module):
                 tw[b, best_n, gj, gi] = gw/scaled_anchors[best_n][0]
                 th[b, best_n, gj, gi] = gh/scaled_anchors[best_n][1]
                 tconf[b, best_n, gj, gi] = 1
-                # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
+                tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
                 # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf
-                tcls[b, best_n, gj, gi, :] = self.negative_class_target
-                tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
+                # tcls[b, best_n, gj, gi, :] = self.negative_class_target
+                # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
 
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
 
