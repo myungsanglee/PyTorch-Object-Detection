@@ -5,6 +5,7 @@ input_size: 416
 in_channels: 3
 num_classes : 20
 scaled_anchors : [[1.3221, 1.73145], [3.19275, 4.00944], [5.05587, 8.09892], [9.47112, 4.84053], [11.2364, 10.0071]]
+conf_threshold: 0.25
 
 epochs: 365
 
@@ -29,7 +30,7 @@ trainer_options:
 #     - 'SWA'
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 # optimizer: 'adam'
 # optimizer_options:

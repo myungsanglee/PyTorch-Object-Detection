@@ -557,13 +557,14 @@ class DecodeYoloV2V2(nn.Module):
 
 
 class MeanAveragePrecision:
-    def __init__(self, num_classes, scaled_anchors, input_size):
+    def __init__(self, num_classes, scaled_anchors, input_size, conf_threshold):
         self._all_true_boxes_variable = 0
         self._all_pred_boxes_variable = 0
         self._img_idx = 0
         self._num_classes = num_classes
         self._scaled_anchors = scaled_anchors
         self._input_size = input_size
+        self._conf_threshold = conf_threshold
 
     def reset_states(self):
         self._all_true_boxes_variable = 0
@@ -576,7 +577,7 @@ class MeanAveragePrecision:
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
-            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=0.25)
+            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=self._conf_threshold)
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()

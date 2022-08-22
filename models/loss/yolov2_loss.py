@@ -28,7 +28,7 @@ class YoloV2Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 10
+        self.lambda_obj = 20
         self.lambda_noobj = 1
         self.lambda_coord = 10
         self.lambda_class = 1

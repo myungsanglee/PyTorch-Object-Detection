@@ -47,7 +47,7 @@ def inference(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=0.5)
+    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
