@@ -214,6 +214,7 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
         for idx in range(1, boxes.size(0)):
             tmp_box = boxes[idx:idx+1, ...]
             if tmp_box[0][-1] != chosen_box[0][-1]:
+                # if torch.lt(bbox_iou(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
                 tmp_boxes.append(tmp_box[0])
             elif torch.lt(bbox_iou(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
                 tmp_boxes.append(tmp_box[0])
