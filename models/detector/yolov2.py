@@ -54,8 +54,6 @@ class YoloV2(nn.Module):
 
         b5 = self.b5_layer(b5)
 
-        # b4 = self.dropout(b4)
-        # b5 = self.dropout(b5)
         x = torch.cat((b4, b5), 1)
 
         x = self.dropout(x)

@@ -1,6 +1,8 @@
 import argparse
 import platform
+import os
 
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining, EarlyStopping
@@ -15,7 +17,7 @@ from utils.module_select import get_model
 from utils.yaml_helper import get_configs
 
 
-def train(cfg):
+def train(cfg, ckpt):
     data_module = YoloV2DataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
@@ -24,7 +26,18 @@ def train(cfg):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])()
+    backbone = get_model(cfg['backbone'])(num_classes=200)
+    
+    if ckpt:
+        # Load pretrained weights
+        ckpt_path = os.path.join(os.getcwd(), ckpt)
+        checkpoint = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(cfg['devices'][0]))
+
+        state_dict = checkpoint["state_dict"]
+        for key in list(state_dict):
+            state_dict[key.replace("model.", "")] = state_dict.pop(key)
+
+        backbone.load_state_dict(state_dict)
     
     model = YoloV2(
         backbone=backbone,
@@ -69,7 +82,8 @@ def train(cfg):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', required=True, type=str, help='config file')
+    parser.add_argument('--ckpt', required=False, default='', type=str, help='pretrained backbone checkpoints file')
     args = parser.parse_args()
     cfg = get_configs(args.cfg)
 
-    train(cfg)
+    train(cfg, args.ckpt)
