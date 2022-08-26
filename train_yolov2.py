@@ -8,6 +8,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
 import torchsummary
+from torchinfo import summary
 
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from module.yolov2_detector import YoloV2Detector
@@ -17,7 +18,7 @@ from utils.module_select import get_model
 from utils.yaml_helper import get_configs
 
 
-def train(cfg, ckpt):
+def train(cfg):
     data_module = YoloV2DataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
@@ -26,26 +27,16 @@ def train(cfg, ckpt):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])(num_classes=200)
-    
-    if ckpt:
-        # Load pretrained weights
-        ckpt_path = os.path.join(os.getcwd(), ckpt)
-        checkpoint = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(cfg['devices'][0]))
-
-        state_dict = checkpoint["state_dict"]
-        for key in list(state_dict):
-            state_dict[key.replace("model.", "")] = state_dict.pop(key)
-
-        backbone.load_state_dict(state_dict)
+    backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'])
     
     model = YoloV2(
-        backbone=backbone,
+        backbone_module_list=backbone.get_features_module_list(),
         num_classes=cfg['num_classes'],
         num_anchors=len(cfg['scaled_anchors'])
     )
     
     torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
+    # summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']))
 
     model_module = YoloV2Detector(
         model=model, 
@@ -71,7 +62,7 @@ def train(cfg, ckpt):
         logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg), default_hp_metric=False),
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
-        plugins=DDPPlugin(find_unused_parameters=True) if platform.system() != 'Windows' else None,
+        plugins=DDPPlugin(find_unused_parameters=False) if platform.system() != 'Windows' else None,
         callbacks=callbacks,
         **cfg['trainer_options']
     )
@@ -82,8 +73,7 @@ def train(cfg, ckpt):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', required=True, type=str, help='config file')
-    parser.add_argument('--ckpt', required=False, default='', type=str, help='pretrained backbone checkpoints file')
     args = parser.parse_args()
     cfg = get_configs(args.cfg)
 
-    train(cfg, args.ckpt)
+    train(cfg)

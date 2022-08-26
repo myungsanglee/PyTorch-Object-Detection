@@ -10,7 +10,7 @@ import timm
 from utils.yaml_helper import get_configs
 from module.yolov2_detector import YoloV2Detector
 from models.detector.yolov2 import YoloV2
-from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2
+from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2, DecodeYoloV2V2
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from utils.module_select import get_model
 
@@ -29,10 +29,10 @@ def inference(cfg, ckpt):
     data_module.prepare_data()
     data_module.setup()
 
-    backbone = get_model(cfg['backbone'])()
+    backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'])
     
     model = YoloV2(
-        backbone=backbone,
+        backbone_module_list=backbone.get_features_module_list(),
         num_classes=cfg['num_classes'],
         num_anchors=len(cfg['scaled_anchors'])
     )
@@ -48,6 +48,7 @@ def inference(cfg, ckpt):
     model_module.eval()
 
     yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov2_decoder_v2 = DecodeYoloV2V2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
@@ -61,6 +62,7 @@ def inference(cfg, ckpt):
         with torch.no_grad():
             predictions = model_module(batch_x)
         boxes = yolov2_decoder(predictions)
+        boxes_v2 = yolov2_decoder_v2(predictions)
         print(f'Inference: {(time.time()-before)*1000:.2f}ms')
         
         # batch_x to img
@@ -74,9 +76,11 @@ def inference(cfg, ckpt):
         # true_boxes = get_target_boxes(batch_y, 416)
 
         tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
+        tagged_img_v2 = get_tagged_img(img, boxes_v2, cfg['names'], (0, 255, 0))
         # tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('test', tagged_img)
+        cv2.imshow('test_v2', tagged_img_v2)
         key = cv2.waitKey(0)
         if key == 27:
             break

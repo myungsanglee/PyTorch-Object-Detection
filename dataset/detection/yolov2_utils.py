@@ -319,7 +319,7 @@ def decode_predictions_v2(input, num_classes, scaled_anchors, input_size):
 
     grid_x = torch.arange(0, layer_w).repeat(layer_h, 1).repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
     grid_y = torch.arange(0, layer_w).repeat(layer_h, 1).t().repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
-    grid_xy = torch.cat([grid_x, grid_y], dim=-1)
+    grid_xy = torch.cat([grid_x, grid_y], dim=-1) # [batch_size, num_anchors, layer_h, layer_w, 2]
     
     pxy = torch.sigmoid(prediction[..., 0:2]) + grid_xy
     pwh = torch.exp(prediction[..., 2:4]) * scaled_anchors
@@ -328,7 +328,7 @@ def decode_predictions_v2(input, num_classes, scaled_anchors, input_size):
     pcls = torch.sigmoid(prediction[..., 5:])
 
     pbox = pbox.view(batch_size, -1, 4) # [batch_size, num_anchors*layer_h*layer_w, 4]
-    pbox *= stride
+    pbox *= stride # convert ouput scale to input scale
     pconf = pconf.view(batch_size, -1, 1) # [batch_size, num_anchors*layer_h*layer_w, 1]
     pcls = pcls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
     pcls = torch.argmax(pcls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
