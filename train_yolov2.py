@@ -35,8 +35,8 @@ def train(cfg):
         num_anchors=len(cfg['scaled_anchors'])
     )
     
-    torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
-    # summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']))
+    # torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
+    summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']))
 
     model_module = YoloV2Detector(
         model=model, 
