@@ -12,7 +12,7 @@ from models.layers.conv_block import Conv2dBnRelu
 
 
 class _Darknet19(nn.Module):
-    def __init__(self, num_classes=1000, in_channels=3):
+    def __init__(self, num_classes=1000, in_channels=3, **kwargs):
         super().__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
@@ -110,7 +110,12 @@ def darknet19(pretrained='', **kwargs):
         model = _Darknet19(num_classes=200)
 
         ckpt_path = os.path.join(os.getcwd(), 'ckpt/darknet19-tiny-imagenet.ckpt')
-        checkpoint = torch.load(ckpt_path)
+        
+        if 'devices' in kwargs:
+            devices = kwargs.pop('devices')
+            checkpoint = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(devices[0]))
+        else:
+            checkpoint = torch.load(ckpt_path)
 
         state_dict = checkpoint["state_dict"]
         for key in list(state_dict):

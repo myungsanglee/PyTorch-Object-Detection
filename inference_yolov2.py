@@ -29,7 +29,7 @@ def inference(cfg, ckpt):
     data_module.prepare_data()
     data_module.setup()
 
-    backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'])
+    backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'], devices=cfg['devices'])
     
     model = YoloV2(
         backbone_module_list=backbone.get_features_module_list(),
