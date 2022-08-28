@@ -227,67 +227,67 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     return torch.stack(boxes_after_nms)
 
 
+# def decode_predictions(input, num_classes, scaled_anchors, input_size):
+#     """decodes predictions of the YOLO v2 model
+    
+#     Convert predictions to boundig boxes info
+
+#     Arguments:
+#         input (Tensor): predictions of the YOLO v2 model with shape  '(batch, num_anchors*(5 + num_classes), 13, 13)'
+#         num_classes: Number of classes in the dataset
+#         scaled_anchors: Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
+#         input_size: input size of Image
+
+#     Returns:
+#         Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+#     """
+#     batch_size, _, layer_h, layer_w = input.size()
+#     num_anchors = len(scaled_anchors)
+#     stride_h = input_size / layer_h
+#     stride_w = input_size / layer_w
+    
+#     # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
+#     prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
+
+#     x = torch.sigmoid(prediction[..., 0])
+#     y = torch.sigmoid(prediction[..., 1])
+#     w = prediction[..., 2]
+#     h = prediction[..., 3]
+#     conf = torch.sigmoid(prediction[..., 4])
+#     pred_cls = torch.sigmoid(prediction[..., 5:])
+
+#     pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
+#     pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
+
+#     FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
+#     LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
+#     # Calculate offsets for each grid
+#     grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
+#         batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
+#     grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
+#         batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
+#     # Calculate anchor w, h
+#     anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
+#     anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
+#     anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
+#     anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
+#     # Add offset and scale with anchors
+#     pred_boxes = FloatTensor(prediction[..., :4].size())
+#     pred_boxes[..., 0] = x + grid_x
+#     pred_boxes[..., 1] = y + grid_y
+#     pred_boxes[..., 2] = torch.exp(w) * anchor_w
+#     pred_boxes[..., 3] = torch.exp(h) * anchor_h
+#     # pred_boxes[..., 2] = ((torch.sigmoid(w) * 2) ** 2) * anchor_w
+#     # pred_boxes[..., 3] = ((torch.sigmoid(h) * 2) ** 2) * anchor_h
+
+#     # Results
+#     _scale = FloatTensor([stride_w, stride_h] * 2)
+#     output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
+    
+#     return output
+
+
 def decode_predictions(input, num_classes, scaled_anchors, input_size):
-    """decodes predictions of the YOLO v2 model
-    
-    Convert predictions to boundig boxes info
-
-    Arguments:
-        input (Tensor): predictions of the YOLO v2 model with shape  '(batch, num_anchors*(5 + num_classes), 13, 13)'
-        num_classes: Number of classes in the dataset
-        scaled_anchors: Scaled Anchors of a specific dataset, [num_anchors, 2(scaled_w, scaled_h)]
-        input_size: input size of Image
-
-    Returns:
-        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-    """
-    batch_size, _, layer_h, layer_w = input.size()
-    num_anchors = len(scaled_anchors)
-    stride_h = input_size / layer_h
-    stride_w = input_size / layer_w
-    
-    # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
-    prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-
-    x = torch.sigmoid(prediction[..., 0])
-    y = torch.sigmoid(prediction[..., 1])
-    w = prediction[..., 2]
-    h = prediction[..., 3]
-    conf = torch.sigmoid(prediction[..., 4])
-    pred_cls = torch.sigmoid(prediction[..., 5:])
-
-    pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
-    pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
-
-    FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-    LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-    # Calculate offsets for each grid
-    grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
-        batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
-    grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
-        batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
-    # Calculate anchor w, h
-    anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
-    anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-    anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
-    anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
-    # Add offset and scale with anchors
-    pred_boxes = FloatTensor(prediction[..., :4].size())
-    pred_boxes[..., 0] = x + grid_x
-    pred_boxes[..., 1] = y + grid_y
-    pred_boxes[..., 2] = torch.exp(w) * anchor_w
-    pred_boxes[..., 3] = torch.exp(h) * anchor_h
-    # pred_boxes[..., 2] = ((torch.sigmoid(w) * 2) ** 2) * anchor_w
-    # pred_boxes[..., 3] = ((torch.sigmoid(h) * 2) ** 2) * anchor_h
-
-    # Results
-    _scale = FloatTensor([stride_w, stride_h] * 2)
-    output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
-    
-    return output
-
-
-def decode_predictions_v2(input, num_classes, scaled_anchors, input_size):
     """decodes predictions of the YOLO v2 model
     
     Convert predictions to boundig boxes info
@@ -536,23 +536,6 @@ class DecodeYoloV2(nn.Module):
     def forward(self, x):
         assert x.size(0) == 1
         decode_pred = decode_predictions(x, self.num_classes, self.scaled_anchors, self.input_size)
-        boxes = non_max_suppression(decode_pred[0], conf_threshold=self.conf_threshold)
-        return boxes
-    
-class DecodeYoloV2V2(nn.Module):
-    '''Decode Yolo V2 Predictions to bunding boxes
-    '''
-    
-    def __init__(self, num_classes, scaled_anchors, input_size, conf_threshold=0.5):
-        super().__init__()
-        self.num_classes = num_classes
-        self.scaled_anchors = scaled_anchors
-        self.input_size = input_size
-        self.conf_threshold = conf_threshold
-        
-    def forward(self, x):
-        assert x.size(0) == 1
-        decode_pred = decode_predictions_v2(x, self.num_classes, self.scaled_anchors, self.input_size)
         boxes = non_max_suppression(decode_pred[0], conf_threshold=self.conf_threshold)
         return boxes
 

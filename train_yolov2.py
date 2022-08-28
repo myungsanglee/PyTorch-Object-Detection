@@ -36,7 +36,7 @@ def train(cfg):
     )
     
     # torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
-    summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']))
+    summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']), device='cpu')
 
     model_module = YoloV2Detector(
         model=model, 
