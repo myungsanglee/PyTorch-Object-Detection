@@ -100,7 +100,6 @@ class YoloV2Loss(nn.Module):
         #   FOR CLASS LOSS   #
         # ================== #
         class_loss = self.lambda_class * self.bce_loss(pcls[mask==1], tcls[mask==1])
-        # class_loss = self.lambda_class * self.bce_loss(pred_cls * mask.unsqueeze(dim=-1), tcls * mask.unsqueeze(dim=-1))
         # print(f'class_loss: {class_loss}\n')
 
         loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
@@ -190,10 +189,9 @@ class YoloV2LossV2(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 10
+        self.lambda_obj = 20
         self.lambda_noobj = 1
-        # self.lambda_coord = 0.05
-        self.lambda_coord = 1
+        self.lambda_coord = 10
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
@@ -236,7 +234,6 @@ class YoloV2LossV2(nn.Module):
         #   FOR BOX COORDINATES Loss   #
         # ============================ #
         box_iou = bbox_iou(pbox * mask, tbox * mask, DIoU=True, CIoU=False)
-        # print(f'box_iou: \n{box_iou[box_iou > 0]}')
         box_loss = self.lambda_coord * self.l1_loss(box_iou, torch.ones(box_iou.size()).type(FloatTensor) * mask)
         # print(f'box_loss: {box_loss}')
         

@@ -9,7 +9,7 @@ from torchinfo import summary
 
 from utils.module_select import get_model
 from models.layers.conv_block import Conv2dBnRelu
-# from models.initialize import weight_initialize
+from models.initialize import weight_initialize
 
 
 # class YoloV2(nn.Module):
@@ -116,7 +116,7 @@ class YoloV2(nn.Module):
         predictions = self.yolov2_head(x)
 
         return predictions
-    
+
 
 if __name__ == '__main__':
     input_size = 416

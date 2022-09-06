@@ -68,7 +68,7 @@ def collater(data):
 #     inter_xmax = np.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
 #     inter_ymax = np.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
 
-#     inter_area = np.clip((inter_xmax - inter_xmin), 0) * np.clip((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
+#     inter_area = np.clip((inter_xmax - inter_xmin), 0, (inter_xmax - inter_xmin)) * np.clip((inter_ymax - inter_ymin), 0, (inter_ymax - inter_ymin)) # (batch, S, S, 1)
 #     box1_area = np.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
 #     box2_area = np.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
 
@@ -472,14 +472,29 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
             else:
                 false_positive[detection_idx] = 1
 
-        tf_cumsum = torch.cumsum(true_positive, dim=0)
+        tp_cumsum = torch.cumsum(true_positive, dim=0)
         fp_cumsum = torch.cumsum(false_positive, dim=0)
-        recalls = tf_cumsum / (total_true_boxes + epsilon)
-        precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
+        recalls = tp_cumsum / (total_true_boxes + epsilon)
+        precisions = torch.divide(tp_cumsum, (tp_cumsum + fp_cumsum + epsilon))
         precisions = torch.cat((torch.tensor([1]), precisions))
         recalls = torch.cat((torch.tensor([0]), recalls))
+        
         # torch.trapz for numerical integration
-        average_precisions.append(torch.trapz(precisions, recalls))
+        # average_precisions.append(torch.trapz(precisions, recalls))
+        
+        for i in torch.arange(precisions.size(0) - 1, 0, -1):
+            precisions[i-1] = torch.max(precisions[i-1], precisions[i])
+
+        ii = []
+        for i in torch.arange(recalls.size(0) - 1):
+            if recalls[i+1] != recalls[i]:
+                ii.append(i+1)
+            
+        ap = torch.zeros(1)    
+        for i in ii:
+            ap += (recalls[i] - recalls[i - 1]) * precisions[i]
+        
+        average_precisions.append(ap)
 
     return torch.mean(torch.stack(average_precisions))
 
@@ -600,3 +615,4 @@ if __name__ == '__main__':
     pbox[0, :] = torch.tensor([0.55, 0.55, 5, 5])
     iou = bbox_iou(tbox, pbox, x1y1x2y2=True, CIoU=True)
     print(iou)
+    

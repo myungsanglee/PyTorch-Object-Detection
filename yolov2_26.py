@@ -322,6 +322,98 @@ def get_target_boxes_for_map(target, input_size):
     return dst
 
 
+# def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.5):
+#     """Calculates mean average precision
+
+#     Arguments:
+#         true_boxes (Tensor): Tensor of all boxes with all images (None, 7), specified as [img_idx, cx, cy, w, h, confidence_score, class_idx]
+#         pred_boxes (Tensor): Similar as true_bboxes
+#         num_classes (int): number of classes
+#         iou_threshold (float): threshold where predicted boxes is correct
+
+#     Returns:
+#         Float: mAP value across all classes given a specific IoU threshold
+#     """
+
+#     # list storing all AP for respective classes
+#     average_precisions = []
+
+#     # used for numerical stability later on
+#     epsilon = 1e-6
+
+#     for c in torch.arange(num_classes, dtype=torch.float32):
+#         # print('\nCalculating AP: ', int(c), ' / ', num_classes)
+
+#         # detections, ground_truths variables in specific class
+#         detections = pred_boxes[torch.where(pred_boxes[..., -1] == c)[0]]
+#         ground_truths = true_boxes[torch.where(true_boxes[..., -1] == c)[0]]
+
+#         # If none exists for this class then we can safely skip
+#         total_true_boxes = len(ground_truths)
+#         if total_true_boxes == 0:
+#             average_precisions.append(torch.tensor(0))
+#             continue
+
+#         # print(c, ' class ground truths size: ', ground_truths.size()[0])
+#         # print(c, ' class detections size: ', detections.size()[0])
+
+#         # find the amount of bboxes for each training example
+#         # Counter here finds how many ground truth bboxes we get
+#         # for each training example, so let's say img 0 has 3,
+#         # img 1 has 5 then we will obtain a dictionary with:
+#         # amount_bboxes = {0:3, 1:5}
+#         amount_bboxes = Counter([int(gt[0]) for gt in ground_truths])
+
+#         # We then go through each key, val in this dictionary
+#         # and convert to the following (w.r.t same example):
+#         # ammount_bboxes = {0:torch.tensor[0,0,0], 1:torch.tensor[0,0,0,0,0]}
+#         for key, val in amount_bboxes.items():
+#             amount_bboxes[key] = torch.zeros(val)
+        
+#         # sort by confidence score
+#         detections = detections[torch.sort(detections[..., -2], descending=True)[1]]
+#         true_positive = torch.zeros((len(detections)))
+#         false_positive = torch.zeros((len(detections)))
+
+#         for detection_idx, detection in enumerate(detections):
+#             # Only take out the ground_truths that have the same
+#             # training idx as detection
+#             ground_truth_img = ground_truths[torch.where(ground_truths[..., 0] == detection[0])[0]]
+
+#             num_gts = len(ground_truth_img)
+#             best_iou = 0
+
+#             for idx, gt in enumerate(ground_truth_img):
+#                 iou = intersection_over_union(detection[1:5], gt[1:5])
+
+#                 if iou > best_iou:
+#                     best_iou = iou
+#                     best_gt_idx = idx
+
+#             if best_iou > iou_threshold:
+#                 # only detect ground truth detection once
+#                 if amount_bboxes[int(detection[0])][best_gt_idx] == 0:
+#                     # true positive and add this bounding box to seen
+#                     true_positive[detection_idx] = 1
+#                     amount_bboxes[int(detection[0])][best_gt_idx] = 1
+#                 else:
+#                     false_positive[detection_idx] = 1
+
+#             # if IOU is lower then the detection is a false positive
+#             else:
+#                 false_positive[detection_idx] = 1
+
+#         tf_cumsum = torch.cumsum(true_positive, dim=0)
+#         fp_cumsum = torch.cumsum(false_positive, dim=0)
+#         recalls = tf_cumsum / (total_true_boxes + epsilon)
+#         precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
+#         precisions = torch.cat((torch.tensor([1]), precisions))
+#         recalls = torch.cat((torch.tensor([0]), recalls))
+#         # torch.trapz for numerical integration
+#         average_precisions.append(torch.trapz(precisions, recalls))
+
+#     return torch.mean(torch.stack(average_precisions))
+
 def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.5):
     """Calculates mean average precision
 
@@ -409,9 +501,23 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
         precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
         precisions = torch.cat((torch.tensor([1]), precisions))
         recalls = torch.cat((torch.tensor([0]), recalls))
-        # torch.trapz for numerical integration
-        average_precisions.append(torch.trapz(precisions, recalls))
+        
+        for i in torch.arange(precisions.size(0) - 1, 0, -1):
+            precisions[i-1] = torch.max(precisions[i-1], precisions[i])
 
+        ii = []
+        for i in torch.arange(recalls.size(0) - 1):
+            if recalls[i+1] != recalls[i]:
+                ii.append(i+1)
+            
+        ap = torch.zeros(1)    
+        for i in ii:
+            ap += (recalls[i] - recalls[i - 1]) * precisions[i]
+
+        # torch.trapz for numerical integration
+        # average_precisions.append(torch.trapz(precisions, recalls))
+        average_precisions.append(ap)
+        
     return torch.mean(torch.stack(average_precisions))
 
 
@@ -1282,9 +1388,9 @@ def make_pred_result(cfg, ckpt):
 if __name__ == '__main__':
     cfg = get_cfg()
 
-    train(cfg)
+    # train(cfg)
 
-    # ckpt = './saved/yolov2_voc/version_26/checkpoints/epoch=184-step=40699.ckpt'
-    # test(cfg, ckpt)
+    ckpt = './saved/yolov2_voc/version_26/checkpoints/epoch=184-step=40699.ckpt'
+    test(cfg, ckpt)
     # inference(cfg, ckpt)
     # make_pred_result(cfg, ckpt)

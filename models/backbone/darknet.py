@@ -8,7 +8,7 @@ import torchsummary
 from torchinfo import summary
 
 from models.layers.conv_block import Conv2dBnRelu
-# from models.initialize import weight_initialize
+from models.initialize import weight_initialize
 
 
 class _Darknet19(nn.Module):
