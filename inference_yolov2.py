@@ -9,7 +9,7 @@ import timm
 
 from utils.yaml_helper import get_configs
 from module.yolov2_detector import YoloV2Detector
-from models.detector.yolov2 import YoloV2
+from models.detector.yolov2 import YoloV2, Resnet34YoloV2
 from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2, get_target_boxes
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from utils.module_select import get_model
@@ -29,13 +29,24 @@ def inference(cfg, ckpt):
     data_module.prepare_data()
     data_module.setup()
 
-    backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'], devices=cfg['devices'])
+    if cfg['backbone'] == 'darknet19':
+
+        backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'], devices=cfg['devices'])
+        
+        model = YoloV2(
+            backbone_module_list=backbone.get_features_module_list(),
+            num_classes=cfg['num_classes'],
+            num_anchors=len(cfg['scaled_anchors'])
+        )
+        
+    else:
+        backbone_feature_module = timm.create_model('resnet34', pretrained=True, features_only=True, out_indices=[3, 4])
     
-    model = YoloV2(
-        backbone_module_list=backbone.get_features_module_list(),
-        num_classes=cfg['num_classes'],
-        num_anchors=len(cfg['scaled_anchors'])
-    )
+        model = Resnet34YoloV2(
+            backbone_feature_module=backbone_feature_module,
+            num_classes=cfg['num_classes'],
+            num_anchors=len(cfg['scaled_anchors'])
+        )
 
     if torch.cuda.is_available:
         model = model.cuda()

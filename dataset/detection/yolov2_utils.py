@@ -420,7 +420,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
         # If none exists for this class then we can safely skip
         total_true_boxes = len(ground_truths)
         if total_true_boxes == 0:
-            average_precisions.append(torch.tensor(0))
+            average_precisions.append(torch.zeros(1))
             continue
 
         # print(c, ' class ground truths size: ', ground_truths.size()[0])
@@ -480,7 +480,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
         recalls = torch.cat((torch.tensor([0]), recalls))
         
         # torch.trapz for numerical integration
-        # average_precisions.append(torch.trapz(precisions, recalls))
+        average_precisions.append(torch.trapz(precisions, recalls))
         
         for i in torch.arange(precisions.size(0) - 1, 0, -1):
             precisions[i-1] = torch.max(precisions[i-1], precisions[i])
@@ -495,6 +495,8 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
             ap += (recalls[i] - recalls[i - 1]) * precisions[i]
         
         average_precisions.append(ap)
+        
+        # print(f'{c} AP: {ap}')
 
     return torch.mean(torch.stack(average_precisions))
 

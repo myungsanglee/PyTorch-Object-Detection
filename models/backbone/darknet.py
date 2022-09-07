@@ -125,7 +125,7 @@ def darknet19(pretrained='', **kwargs):
         
     else:
         model = _Darknet19(**kwargs)
-        # weight_initialize(model)
+        weight_initialize(model)
         
     return model
 
