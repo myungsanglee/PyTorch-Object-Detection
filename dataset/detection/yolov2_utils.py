@@ -480,7 +480,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
         recalls = torch.cat((torch.tensor([0]), recalls))
         
         # torch.trapz for numerical integration
-        average_precisions.append(torch.trapz(precisions, recalls))
+        # average_precisions.append(torch.trapz(precisions, recalls))
         
         for i in torch.arange(precisions.size(0) - 1, 0, -1):
             precisions[i-1] = torch.max(precisions[i-1], precisions[i])
