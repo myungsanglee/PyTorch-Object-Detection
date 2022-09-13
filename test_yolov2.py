@@ -3,7 +3,6 @@ import platform
 
 import pytorch_lightning as pl
 from pytorch_lightning.plugins import DDPPlugin
-import torchsummary
 from torchinfo import summary
 import timm
 
@@ -25,10 +24,15 @@ def test(cfg, ckpt):
 
     if cfg['backbone'] == 'darknet19':
 
-        backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'], devices=cfg['devices'])
+        backbone_features_module = get_model(cfg['backbone'])(
+            pretrained=cfg['backbone_pretrained'], 
+            devices=cfg['devices'],
+            features_only=True,
+            out_indices=[4, 5]
+        )
         
         model = YoloV2(
-            backbone_module_list=backbone.get_features_module_list(),
+            backbone_features_module=backbone_features_module,
             num_classes=cfg['num_classes'],
             num_anchors=len(cfg['scaled_anchors'])
         )
@@ -42,7 +46,6 @@ def test(cfg, ckpt):
             num_anchors=len(cfg['scaled_anchors'])
         )
     
-    # torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
     summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']), device='cpu')
 
     model_module = YoloV2Detector.load_from_checkpoint(
@@ -69,3 +72,4 @@ if __name__ == '__main__':
     cfg = get_configs(args.cfg)
 
     test(cfg, args.ckpt)
+    

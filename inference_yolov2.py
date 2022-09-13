@@ -31,10 +31,15 @@ def inference(cfg, ckpt):
 
     if cfg['backbone'] == 'darknet19':
 
-        backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'], devices=cfg['devices'])
+        backbone_features_module = get_model(cfg['backbone'])(
+            pretrained=cfg['backbone_pretrained'], 
+            devices=cfg['devices'],
+            features_only=True,
+            out_indices=[4, 5]
+        )
         
         model = YoloV2(
-            backbone_module_list=backbone.get_features_module_list(),
+            backbone_features_module=backbone_features_module,
             num_classes=cfg['num_classes'],
             num_anchors=len(cfg['scaled_anchors'])
         )
@@ -104,3 +109,4 @@ if __name__ == '__main__':
     cfg = get_configs(args.cfg)
 
     inference(cfg, args.ckpt)
+    

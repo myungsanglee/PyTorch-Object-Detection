@@ -26,10 +26,15 @@ def make_pred_result_file_for_public_map_calculator(cfg, ckpt, save_dir):
     data_module.prepare_data()
     data_module.setup()
 
-    backbone = get_model(cfg['backbone'])(pretrained=cfg['backbone_pretrained'], devices=cfg['devices'])
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'], 
+        features_only=True, 
+        ut_indices=[4, 5]
+    )
     
     model = YoloV2(
-        backbone_module_list=backbone.get_features_module_list(),
+        backbone_features_module=backbone_features_module,
         num_classes=cfg['num_classes'],
         num_anchors=len(cfg['scaled_anchors'])
     )

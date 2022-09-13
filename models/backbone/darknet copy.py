@@ -9,7 +9,6 @@ from torchinfo import summary
 from torch._jit_internal import _copy_to_script_wrapper
 
 from models.layers.conv_block import Conv2dBnRelu
-# from models.initialize import weight_initialize
 
 
 class FeatureListNet(nn.ModuleList):
@@ -41,7 +40,7 @@ class FeatureListNet(nn.ModuleList):
                     out[name] = x
     
             return list(out.values())
-        
+
 
 class _Darknet19(nn.Module):
     def __init__(self, num_classes=1000, in_channels=3, **kwargs):
@@ -151,13 +150,12 @@ def darknet19(pretrained='', features_only=False, out_indices=None, **kwargs):
         
     else:
         model = _Darknet19(**kwargs)
-        # weight_initialize(model)
-    
-    
+        
+        
     if features_only:
         model = model.get_features_module(out_indices)
-        
-        
+    
+    
     return model
 
 
@@ -165,25 +163,35 @@ if __name__ == '__main__':
     input_size = 416
     in_channels = 3
     num_classes = 200
-    
+    tmp_input = torch.randn((1, in_channels, input_size, input_size))
     
     # Get Model
-    # model = darknet19(pretrained='tiny-imagenet')
-    model = darknet19(pretrained='tiny-imagenet', features_only=True, out_indices=[4, 5])
+    # model = darknet19(pretrained='tiny-imagenet', features_only=True, out_indices=[4, 5])
     # model = darknet19(pretrained='tiny-imagenet', features_only=True)
+    model = darknet19(pretrained='tiny-imagenet')
     # model = darknet19(pretrained='', features_only=True)
     
-    # Check param values
-    # for m1 in model.children():
-    #     # print(m1)
-    #     for m2 in m1.children():
-    #         # print(m2)
-    #         for param in m2.parameters():
-    #             print(param[0, 0, 0, :])
-    #             break
-    #         break
-    #     break
-    
     # Model summary
-    summary(model, (1, in_channels, input_size, input_size), device='cpu')
+    # summary(model, (1, in_channels, input_size, input_size), device='cpu')
+    
+    for m1 in model.children():
+        # print(m1)
+        for m2 in m1.children():
+            # print(m2)
+            for param in m2.parameters():
+                print(param[0, 0, 0, :])
+                break
+            break
+        break
+    
+    
+    # x = model(tmp_input)
+    # print(type(x))
+    # for module in x:
+    #     print(module.size())
+    
+    # model = darknet19(pretrained='tiny-imagenet', features_only=True)
+    # x = model(tmp_input)
+    # print(type(x))
+    # print(x.size())
     

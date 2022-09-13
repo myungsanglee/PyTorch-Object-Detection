@@ -4,73 +4,19 @@ sys.path.append(os.getcwd())
 
 import torch
 from torch import nn
-import torchsummary
 from torchinfo import summary
 import timm
 
 from utils.module_select import get_model
 from models.layers.conv_block import Conv2dBnRelu
-from models.initialize import weight_initialize
-
-
-# class YoloV2(nn.Module):
-#     def __init__(self, backbone, num_classes, num_anchors):
-#         super().__init__()
-
-#         self.backbone = backbone
-#         self.num_classes = num_classes
-#         self.num_anchors = num_anchors
-
-#         self.b4_layer = nn.Sequential(
-#             Conv2dBnRelu(512, 64, 1)
-#         )
-
-#         self.b5_layer = nn.Sequential(
-#             Conv2dBnRelu(1024, 1024, 3),
-#             Conv2dBnRelu(1024, 1024, 3)
-#         )
-        
-#         self.yolov2_head = nn.Sequential(
-#             Conv2dBnRelu(1280, 1024, 3),
-#             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
-#         )
-
-#         self.dropout = nn.Dropout2d(0.5)
-
-#         # weight_initialize(self.b4_layer)
-#         # weight_initialize(self.b5_layer)
-#         # weight_initialize(self.yolov2_head)
-
-#     def forward(self, x):
-#         # backbone forward
-#         x = self.backbone.stem(x)
-#         b1 = self.backbone.layer1(x)
-#         b2 = self.backbone.layer2(b1)
-#         b3 = self.backbone.layer3(b2)
-#         b4 = self.backbone.layer4(b3)
-#         b5 = self.backbone.layer5(b4)
-
-#         b4 = self.b4_layer(b4)
-#         bs, _, h, w = b4.size()
-#         b4 = b4.view(bs, -1, h//2, w//2)
-
-#         b5 = self.b5_layer(b5)
-
-#         x = torch.cat((b4, b5), 1)
-
-#         x = self.dropout(x)
-
-#         # prediction
-#         predictions = self.yolov2_head(x)
-
-#         return predictions
+# from models.initialize import weight_initialize
 
 
 class YoloV2(nn.Module):
-    def __init__(self, backbone_module_list, num_classes, num_anchors):
+    def __init__(self, backbone_features_module, num_classes, num_anchors):
         super().__init__()
 
-        self.backbone_module_list = backbone_module_list
+        self.backbone_features_module = backbone_features_module
         self.num_classes = num_classes
         self.num_anchors = num_anchors
 
@@ -90,18 +36,13 @@ class YoloV2(nn.Module):
 
         self.dropout = nn.Dropout2d(0.5)
 
-        weight_initialize(self.b4_layer)
-        weight_initialize(self.b5_layer)
-        weight_initialize(self.yolov2_head)
+        # weight_initialize(self.b4_layer)
+        # weight_initialize(self.b5_layer)
+        # weight_initialize(self.yolov2_head)
 
     def forward(self, x):
         # backbone forward
-        for idx, module in enumerate(self.backbone_module_list):
-            x = module(x)
-            if idx == 4:
-                b4 = x
-            elif idx == 5:
-                b5 = x
+        b4, b5 = self.backbone_features_module(x)
 
         b4 = self.b4_layer(b4)
         bs, _, h, w = b4.size()
@@ -165,27 +106,33 @@ class Resnet34YoloV2(nn.Module):
         predictions = self.yolov2_head(x)
 
         return predictions
-    
+
 
 if __name__ == '__main__':
     input_size = 416
     tmp_input = torch.randn((1, 3, input_size, input_size))
 
-    backbone = get_model('darknet19')(pretrained='tiny-imagenet')
-    backbone_feature_module = timm.create_model('resnet34', pretrained=True, features_only=True, out_indices=[3, 4])
+    backbone_features_module = get_model('darknet19')(pretrained='tiny-imagenet', features_only=True, out_indices=[4, 5])
     
     model = YoloV2(
-        backbone_module_list=backbone.get_features_module_list(),
+        backbone_features_module=backbone_features_module,
         num_classes=20,
         num_anchors=5
     )
+    
+    # backbone_feature_module = timm.create_model('resnet34', pretrained=True, features_only=True, out_indices=[3, 4])
+    
+    # model = Resnet34YoloV2(
+    #     backbone_feature_module=backbone_feature_module,
+    #     num_classes=20,
+    #     num_anchors=5
+    # )
+    
     summary(model, input_size=(1, 3, input_size, input_size), device='cpu')
-    model = Resnet34YoloV2(
-        backbone_feature_module=backbone_feature_module,
-        num_classes=20,
-        num_anchors=5
-    )
-
+    
+    '''
+    Check param values
+    '''
     # for name, module in model.named_children():
     #     print(name)
     #     # print(module)
@@ -200,12 +147,6 @@ if __name__ == '__main__':
     #         break
     #     break
     # print('')
-    
-    # torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
-    summary(model, input_size=(1, 3, input_size, input_size), device='cpu')
-    
-    
-    
     
     
     '''
