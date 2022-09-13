@@ -30,7 +30,7 @@ def make_pred_result_file_for_public_map_calculator(cfg, ckpt, save_dir):
         pretrained=cfg['backbone_pretrained'], 
         devices=cfg['devices'], 
         features_only=True, 
-        ut_indices=[4, 5]
+        out_indices=[4, 5]
     )
     
     model = YoloV2(
