@@ -205,7 +205,7 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
 
     if boxes.size(0) == 0:
         return boxes
-
+    
     while True:
         chosen_box = boxes[:1, ...]
         boxes_after_nms.append(chosen_box[0])
@@ -574,7 +574,7 @@ class MeanAveragePrecision:
 
     def update_state(self, y_true, y_pred):
         true_boxes = get_target_boxes_for_map(y_true, self._input_size)
-
+        
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
