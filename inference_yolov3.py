@@ -9,7 +9,7 @@ import cv2
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import get_tagged_img, DecodeYoloV3
+from dataset.detection.yolov3_utils import get_tagged_img, DecodeYoloV3, get_target_boxes
 from dataset.detection.yolov3_dataset import YoloV3DataModule
 from utils.module_select import get_model
 
@@ -28,10 +28,15 @@ def inference(cfg, ckpt):
     data_module.prepare_data()
     data_module.setup()
 
-    backbone = get_model(cfg['backbone'])()
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'],
+        features_only=True,
+        out_indices=[3, 4, 5]
+    )
     
     model = YoloV3(
-        backbone=backbone,
+        backbone_features_module=backbone_features_module,
         num_classes=cfg['num_classes'],
         num_anchors=len(cfg['anchors'])
     )
@@ -46,7 +51,7 @@ def inference(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=0.5)
+    yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
@@ -69,10 +74,14 @@ def inference(cfg, ckpt):
             img = batch_x[0].numpy()   
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        
+        true_boxes = get_target_boxes(batch_y, 416)
+        
+        pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
+        true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
 
-        tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
-
-        cv2.imshow('test', tagged_img)
+        cv2.imshow('Prediction', pred_img)
+        cv2.imshow('GT', true_img)
         key = cv2.waitKey(0)
         if key == 27:
             break
@@ -88,3 +97,4 @@ if __name__ == '__main__':
     cfg = get_configs(args.cfg)
 
     inference(cfg, args.ckpt)
+    

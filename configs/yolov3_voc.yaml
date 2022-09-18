@@ -1,5 +1,7 @@
 model : 'yolov3'
 backbone: 'darknet19'
+backbone_pretrained: '' # 'tiny-imagenet' or '' 
+# backbone_pretrained: 'tiny-imagenet' # 'tiny-imagenet' or '' 
 dataset_name : 'voc'
 input_size: 416
 in_channels: 3
@@ -15,11 +17,13 @@ anchors : [
   [156, 198],
   [373, 326]
 ]
+conf_threshold: 0.25
 
 epochs: 365
 
 train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
 val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
+# val_list : '/home/fssv2/myungsang/datasets/tmp/val.txt'
 names : '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'
 workers: 32 # number of workers to generate data
 batch_size: 64
@@ -31,35 +35,21 @@ trainer_options:
   check_val_every_n_epoch: 5
   num_sanity_val_steps: 0
 
-# experimental_options:
-#   os: 'windows' # add this option if an error about NCCL occurs in windows
-#   callbacks:
-#     - 'SWA'
-
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
 devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
-
-# optimizer: 'adam'
-# optimizer_options:
-#   lr: 0
-#   weight_decay: 1e-5
-
-# optimizer: 'radam'
-# optimizer_options:
-#   lr: 1e-3
-#   weight_decay: 1e-5
-
-# optimizer: 'adamw'
-# optimizer_options:
-#   lr: 0
-#   weight_decay: 1e-5
 
 optimizer: 'sgd'
 optimizer_options:
   lr: 1e-3
   momentum: 0.9
-  weight_decay: 5e-4
+  weight_decay: 5e-3
   nesterov: True
+
+scheduler: 'yolo_lr'
+scheduler_options:
+  burn_in: 1000
+  steps: [40000]
+  scales: [0.1]
 
 # scheduler: 'multi_step'
 # scheduler_options:
@@ -80,8 +70,7 @@ optimizer_options:
 #   T_up: 220
 #   gamma: 0.96
 
-scheduler: 'yolo_lr'
-scheduler_options:
-  burn_in: 1000
-  steps: [40000, 60000]
-  scales: [0.1, 0.1]
+# experimental_options:
+#   os: 'windows' # add this option if an error about NCCL occurs in windows
+#   callbacks:
+#     - 'SWA'

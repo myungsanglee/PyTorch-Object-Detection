@@ -26,16 +26,16 @@ class YoloV3Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 10
+        self.lambda_obj = 20
         self.lambda_noobj = 1
-        self.lambda_coord = 5
+        self.lambda_coord = 10
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
 
         self.mse_loss = nn.MSELoss(reduction='mean')
         self.bce_loss = nn.BCELoss(reduction='mean')
-        self.fc_loss = FocalLoss(reduction='mean')
+        # self.fc_loss = FocalLoss(reduction='mean')
 
     def forward(self, input, target):
         """
@@ -48,15 +48,16 @@ class YoloV3Loss(nn.Module):
         """
         batch_size, _, layer_h, layer_w = input.size()
         scaled_anchors = [[anchor_w * (layer_w/self.input_size), anchor_h * (layer_h/self.input_size)] for anchor_w, anchor_h in self.anchors]
+        
         # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
         prediction = input.view(batch_size, len(self.anchors), -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
 
-        x = torch.sigmoid(prediction[..., 0])
-        y = torch.sigmoid(prediction[..., 1])
-        w = torch.exp(prediction[..., 2])
-        h = torch.exp(prediction[..., 3])
-        conf = torch.sigmoid(prediction[..., 4])
-        pred_cls = torch.sigmoid(prediction[..., 5:])
+        px = torch.sigmoid(prediction[..., 0])
+        py = torch.sigmoid(prediction[..., 1])
+        pw = torch.exp(prediction[..., 2])
+        ph = torch.exp(prediction[..., 3])
+        pconf = torch.sigmoid(prediction[..., 4])
+        pcls = torch.sigmoid(prediction[..., 5:])
         
         mask, noobj_mask, tx, ty, tw, th, tconf, tcls = self.encode_target(target, self.num_classes, scaled_anchors, layer_w, layer_h, self.ignore_threshold)
         if prediction.is_cuda:
@@ -72,27 +73,32 @@ class YoloV3Loss(nn.Module):
         # ============================ #
         #   FOR BOX COORDINATES Loss   #
         # ============================ #
-        loss_x = self.mse_loss(x * mask, tx * mask)
-        loss_y = self.mse_loss(y * mask, ty * mask)
-        loss_w = self.mse_loss(w * mask, tw * mask)
-        loss_h = self.mse_loss(h * mask, th * mask)
+        loss_x = self.mse_loss(px * mask, tx)
+        loss_y = self.mse_loss(py * mask, ty)
+        loss_w = self.mse_loss(pw * mask, tw)
+        loss_h = self.mse_loss(ph * mask, th)
         box_loss = self.lambda_coord * (loss_x + loss_y + loss_w + loss_h)
-
+        # print(f'box_loss: {box_loss}')
+        
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.lambda_obj * self.bce_loss(conf * mask, tconf)
-
+        object_loss = self.lambda_obj * self.bce_loss(pconf * mask, tconf)
+        # print(f'object_loss: {object_loss}')
+        
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.lambda_noobj * self.bce_loss(conf * noobj_mask, noobj_mask * 0.0)
-
+        no_object_loss = self.lambda_noobj * self.bce_loss(pconf * noobj_mask, noobj_mask * 0.0)
+        # print(f'no_object_loss: {no_object_loss}')
+        
         # ================== #
         #   FOR CLASS LOSS   #
         # ================== #
-        class_loss = self.lambda_class * self.fc_loss(pred_cls[mask==1], tcls[mask==1])
-
+        class_loss = self.lambda_class * self.bce_loss(pcls[mask==1], tcls[mask==1])
+        # class_loss = self.lambda_class * self.fc_loss(pcls[mask==1], tcls[mask==1])
+        # print(f'class_loss: {class_loss}\n')
+        
         loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
 
         return loss
@@ -148,9 +154,6 @@ class YoloV3Loss(nn.Module):
                 calc_iou = bbox_iou(gt_box, anchors_box, x1y1x2y2=True) # [num_anchors, 1]
                 calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
                 
-                # # checking iou
-                # check_iou = torch.where(calc_iou > ignore_threshold)[0]
-                # if check_iou.size(0):
                 noobj_mask[b, calc_iou > ignore_threshold, gj, gi] = 0
                 best_n = torch.argmax(calc_iou)
                 mask[b, best_n, gj, gi] = 1

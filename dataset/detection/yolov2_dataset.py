@@ -135,7 +135,7 @@ if __name__ == '__main__':
         A.Resize(input_size, input_size, always_apply=True),
         A.Normalize(0, 1),
         ToTensorV2(),
-    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.2))
+    ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
     
     train_dataset = YoloV2Dataset(
         train_transforms, 

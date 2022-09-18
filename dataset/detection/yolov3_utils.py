@@ -1,8 +1,13 @@
+import sys
+import os
+sys.path.append(os.getcwd())
+
 from collections import Counter
 import math
 
 import torch
 from torch import nn
+import numpy as np
 import cv2
 
 
@@ -37,40 +42,37 @@ def collater(data):
     return {'img': torch.stack(imgs), 'annot': padded_annots}
 
 
-# def intersection_over_union(boxes1, boxes2):
+# def intersection_over_union_numpy(boxes1, boxes2):
 #     """Calculation of intersection-over-union
 
 #     Arguments:
-#         boxes1 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
-#         boxes2 (Tensor): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+#         boxes1 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
+#         boxes2 (Numpy Array): boxes with shape '(batch, S, S, 4) or (batch, num_boxes, 4) or (num_boxes, 4)', specified as [cx, cy, w, h]
 
 #     Returns:
-#         Tensor: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
+#         Numpy Array: IoU with shape '(batch, S, S, 1) or (batch, num_boxes, 1) or (num_boxes, 1)'
 #     """
 
-#     box1_xmin = boxes1[..., 0:1] - (boxes1[..., 2:3] / 2.) # (batch, S, S, 1)
-#     box1_ymin = boxes1[..., 1:2] - (boxes1[..., 3:4] / 2.) # (batch, S, S, 1)
-#     box1_xmax = boxes1[..., 0:1] + (boxes1[..., 2:3] / 2.) # (batch, S, S, 1)
-#     box1_ymax = boxes1[..., 1:2] + (boxes1[..., 3:4] / 2.) # (batch, S, S, 1)
+#     box1_xmin = (boxes1[..., 0:1] - boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box1_ymin = (boxes1[..., 1:2] - boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
+#     box1_xmax = (boxes1[..., 0:1] + boxes1[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box1_ymax = (boxes1[..., 1:2] + boxes1[..., 3:4]) / 2. # (batch, S, S, 1)
 
-#     box2_xmin = boxes2[..., 0:1] - (boxes2[..., 2:3] / 2.) # (batch, S, S, 1)
-#     box2_ymin = boxes2[..., 1:2] - (boxes2[..., 3:4] / 2.) # (batch, S, S, 1)
-#     box2_xmax = boxes2[..., 0:1] + (boxes2[..., 2:3] / 2.) # (batch, S, S, 1)
-#     box2_ymax = boxes2[..., 1:2] + (boxes2[..., 3:4] / 2.) # (batch, S, S, 1)
+#     box2_xmin = (boxes2[..., 0:1] - boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box2_ymin = (boxes2[..., 1:2] - boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
+#     box2_xmax = (boxes2[..., 0:1] + boxes2[..., 2:3]) / 2. # (batch, S, S, 1)
+#     box2_ymax = (boxes2[..., 1:2] + boxes2[..., 3:4]) / 2. # (batch, S, S, 1)
 
-#     inter_xmin = torch.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
-#     inter_ymin = torch.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
-#     inter_xmax = torch.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
-#     inter_ymax = torch.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
-#     inter_area = torch.clamp((inter_xmax - inter_xmin), 0) * torch.clamp((inter_ymax - inter_ymin), 0) # (batch, S, S, 1)
+#     inter_xmin = np.maximum(box1_xmin, box2_xmin) # (batch, S, S, 1)
+#     inter_ymin = np.maximum(box1_ymin, box2_ymin) # (batch, S, S, 1)
+#     inter_xmax = np.minimum(box1_xmax, box2_xmax) # (batch, S, S, 1)
+#     inter_ymax = np.minimum(box1_ymax, box2_ymax) # (batch, S, S, 1)
 
-#     box1_area = torch.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
-#     box2_area = torch.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
-#     union_area = box1_area + box2_area - inter_area + 1e-7
+#     inter_area = np.clip((inter_xmax - inter_xmin), 0, (inter_xmax - inter_xmin)) * np.clip((inter_ymax - inter_ymin), 0, (inter_ymax - inter_ymin)) # (batch, S, S, 1)
+#     box1_area = np.abs((box1_xmax - box1_xmin) * (box1_ymax - box1_ymin)) # (batch, S, S, 1)
+#     box2_area = np.abs((box2_xmax - box2_xmin) * (box2_ymax - box2_ymin)) # (batch, S, S, 1)
 
-#     iou = inter_area / union_area # (batch, S, S, 1)
-
-#     return iou
+#     return inter_area / (box1_area + box2_area - inter_area + 1e-6) # (batch, S, S, 1)
 
 
 def bbox_iou(boxes1, boxes2, x1y1x2y2=False, GIoU=False, DIoU=False, CIoU=False, eps=1e-6):
@@ -145,6 +147,41 @@ def bbox_iou(boxes1, boxes2, x1y1x2y2=False, GIoU=False, DIoU=False, CIoU=False,
         return iou
 
 
+def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
+    """Does Non Max Suppression given boxes
+
+    Arguments:
+        boxes (Numpy Array): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+        iou_threshold (float): threshold where predicted boxes is correct
+        conf_threshold (float): threshold to remove predicted boxes
+
+    Returns:
+        Numpy Array: boxes after performing NMS given a specific IoU threshold '(None, 6)'
+    """
+
+    # boxes smaller than the conf_threshold are removed
+    boxes = np.take(boxes, np.where(boxes[..., 4] > conf_threshold)[0], axis=0)
+
+    # sort descending by confidence score
+    boxes = np.take(boxes, np.argsort(-boxes[..., 4]), axis=0)
+
+    # get boxes after nms
+    boxes_after_nms = np.empty(shape=(0, 6))
+
+    while not(np.less(boxes.shape[0], 1)):
+        chosen_box = np.expand_dims(boxes[0], axis=0)
+        tmp_boxes = np.empty(shape=(0, 6))
+        for idx in range(1, boxes.shape[0]):
+            tmp_box = np.expand_dims(boxes[idx], axis=0)
+            if tmp_box[0][-1] != chosen_box[0][-1] or bbox_iou(chosen_box[..., :4], tmp_box[..., :4]) < iou_threshold:
+                tmp_boxes = np.append(tmp_boxes, tmp_box, axis=0)
+        boxes = tmp_boxes
+
+        boxes_after_nms = np.append(boxes_after_nms, chosen_box, axis=0)
+
+    return boxes_after_nms
+
+
 def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     """Does Non Max Suppression given boxes
 
@@ -177,6 +214,7 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
         for idx in range(1, boxes.size(0)):
             tmp_box = boxes[idx:idx+1, ...]
             if tmp_box[0][-1] != chosen_box[0][-1]:
+                # if torch.lt(bbox_iou(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
                 tmp_boxes.append(tmp_box[0])
             elif torch.lt(bbox_iou(chosen_box[..., :4], tmp_box[..., :4]), iou_threshold):
                 tmp_boxes.append(tmp_box[0])
@@ -189,61 +227,112 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     return torch.stack(boxes_after_nms)
 
 
+# def decode_predictions(input, num_classes, anchors, input_size):
+#     """decodes predictions of the YOLO v3 model
+    
+#     Convert predictions to boundig boxes info
+
+#     Arguments:
+#         input (Tensor): predictions of the YOLO v3 model with shape  '(batch, num_anchors*(5 + num_classes), layer_h, layer_w)'
+#         num_classes: Number of classes in the dataset
+#         anchors: Anchors of a specific dataset, [num_anchors, 2(anchor_w, anchor_h)]
+#         input_size: input size of Image
+
+#     Returns:
+#         Tensor: boxes after decoding predictions '(batch, num_anchors*layer_h*layer_w, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+#     """
+#     batch_size, _, layer_h, layer_w = input.size()
+#     num_anchors = len(anchors)
+#     stride_h = input_size / layer_h
+#     stride_w = input_size / layer_w
+#     scaled_anchors = [[anchor_w / stride_w, anchor_h / stride_h] for anchor_w, anchor_h in anchors]
+    
+#     # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
+#     prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
+
+#     x = torch.sigmoid(prediction[..., 0])
+#     y = torch.sigmoid(prediction[..., 1])
+#     w = prediction[..., 2]
+#     h = prediction[..., 3]
+#     conf = torch.sigmoid(prediction[..., 4])
+#     pred_cls = torch.sigmoid(prediction[..., 5:])
+
+#     pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
+#     pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
+
+#     FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
+#     LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
+#     # Calculate offsets for each grid
+#     grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
+#         batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
+#     grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
+#         batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
+#     # Calculate anchor w, h
+#     anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
+#     anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
+#     anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
+#     anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
+#     # Add offset and scale with anchors
+#     pred_boxes = FloatTensor(prediction[..., :4].size())
+#     pred_boxes[..., 0] = x + grid_x
+#     pred_boxes[..., 1] = y + grid_y
+#     pred_boxes[..., 2] = torch.exp(w) * anchor_w
+#     pred_boxes[..., 3] = torch.exp(h) * anchor_h
+#     # Results
+#     _scale = FloatTensor([stride_w, stride_h] * 2)
+#     output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
+    
+#     return output
+
+
 def decode_predictions(input, num_classes, anchors, input_size):
     """decodes predictions of the YOLO v3 model
     
     Convert predictions to boundig boxes info
 
     Arguments:
-        input (Tensor): predictions of the YOLO v3 model with shape  '(batch, num_anchors*(5 + num_classes), layer_h, layer_w)'
+        input (Tensor): predictions of the YOLO v3 model with shape  '(batch, num_anchors*(5 + num_classes), 13, 13)'
         num_classes: Number of classes in the dataset
         anchors: Anchors of a specific dataset, [num_anchors, 2(anchor_w, anchor_h)]
         input_size: input size of Image
 
     Returns:
-        Tensor: boxes after decoding predictions '(batch, num_anchors*layer_h*layer_w, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+                cx, cy, w, h values are input_size scale
     """
     batch_size, _, layer_h, layer_w = input.size()
-    num_anchors = len(anchors)
+    num_anchors = len(scaled_anchors)
     stride_h = input_size / layer_h
     stride_w = input_size / layer_w
     scaled_anchors = [[anchor_w / stride_w, anchor_h / stride_h] for anchor_w, anchor_h in anchors]
+    
     # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
     prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-
-    x = torch.sigmoid(prediction[..., 0])
-    y = torch.sigmoid(prediction[..., 1])
-    w = prediction[..., 2]
-    h = prediction[..., 3]
-    conf = torch.sigmoid(prediction[..., 4])
-    pred_cls = torch.sigmoid(prediction[..., 5:])
-
-    pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
-    pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
-
-    FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-    LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-    # Calculate offsets for each grid
-    grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
-        batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
-    grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
-        batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
-    # Calculate anchor w, h
-    anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
-    anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-    anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
-    anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
-    # Add offset and scale with anchors
-    pred_boxes = FloatTensor(prediction[..., :4].size())
-    pred_boxes[..., 0] = x + grid_x
-    pred_boxes[..., 1] = y + grid_y
-    pred_boxes[..., 2] = torch.exp(w) * anchor_w
-    pred_boxes[..., 3] = torch.exp(h) * anchor_h
-    # Results
-    _scale = FloatTensor([stride_w, stride_h] * 2)
-    output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
     
-    return output
+    FloatTensor = torch.cuda.FloatTensor if prediction.is_cuda else torch.FloatTensor
+    
+    stride = FloatTensor([stride_w, stride_h] * 2)
+
+    scaled_anchors = FloatTensor(scaled_anchors).unsqueeze(dim=0)
+    scaled_anchors = scaled_anchors.repeat(batch_size, 1, 1).repeat(1, 1, layer_h*layer_w).view(batch_size, num_anchors, layer_h, layer_w, 2)
+
+    grid_x = torch.arange(0, layer_w).repeat(layer_h, 1).repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
+    grid_y = torch.arange(0, layer_w).repeat(layer_h, 1).t().repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
+    grid_xy = torch.cat([grid_x, grid_y], dim=-1) # [batch_size, num_anchors, layer_h, layer_w, 2]
+    
+    pxy = torch.sigmoid(prediction[..., 0:2]) + grid_xy
+    pwh = torch.exp(prediction[..., 2:4]) * scaled_anchors
+    pbox = torch.cat([pxy, pwh], dim=-1)
+    pconf = torch.sigmoid(prediction[..., 4:5])
+    pcls = torch.sigmoid(prediction[..., 5:])
+
+    pbox = pbox.view(batch_size, -1, 4) # [batch_size, num_anchors*layer_h*layer_w, 4]
+    pbox *= stride # convert ouput scale to input scale
+    pconf = pconf.view(batch_size, -1, 1) # [batch_size, num_anchors*layer_h*layer_w, 1]
+    pcls = pcls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
+    pcls = torch.argmax(pcls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
+
+    return torch.cat((pbox, pconf, pcls), -1)
 
 
 def get_target_boxes(target, input_size):
@@ -330,7 +419,7 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
         # If none exists for this class then we can safely skip
         total_true_boxes = len(ground_truths)
         if total_true_boxes == 0:
-            average_precisions.append(torch.tensor(0))
+            average_precisions.append(torch.zeros(1))
             continue
 
         # print(c, ' class ground truths size: ', ground_truths.size()[0])
@@ -388,8 +477,25 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
         precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
         precisions = torch.cat((torch.tensor([1]), precisions))
         recalls = torch.cat((torch.tensor([0]), recalls))
+        
         # torch.trapz for numerical integration
-        average_precisions.append(torch.trapz(precisions, recalls))
+        # average_precisions.append(torch.trapz(precisions, recalls))
+        
+        for i in torch.arange(precisions.size(0) - 1, 0, -1):
+            precisions[i-1] = torch.max(precisions[i-1], precisions[i])
+
+        ii = []
+        for i in torch.arange(recalls.size(0) - 1):
+            if recalls[i+1] != recalls[i]:
+                ii.append(i+1)
+            
+        ap = torch.zeros(1)    
+        for i in ii:
+            ap += (recalls[i] - recalls[i - 1]) * precisions[i]
+        
+        average_precisions.append(ap)
+        
+        # print(f'{c} AP: {ap}')
 
     return torch.mean(torch.stack(average_precisions))
 
@@ -423,12 +529,12 @@ def get_tagged_img(img, boxes, names_path, color):
 
         # print(f'{class_name}: {xmin}, {ymin}, {xmax}, {ymax}')
 
-        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color)
+        img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color, thickness=1)
         img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
                           fontFace=cv2.FONT_HERSHEY_PLAIN,
                           fontScale=1,
                           color=color)
-
+    # print(f'')
     return img
 
 
@@ -517,22 +623,9 @@ class MeanAveragePrecision:
 
 
 if __name__ == '__main__':
-    tmp_bbox1 = torch.zeros((2, 4))
-    tmp_bbox2 = torch.zeros((2, 4))
-    tmp_bbox1[0] = torch.tensor([50, 50, 100, 100])
-    tmp_bbox2[0] = torch.tensor([100, 100, 100, 100])
-
-    tmp_bbox1[1] = torch.tensor([50, 50, 100, 100])
-    tmp_bbox2[1] = torch.tensor([100, 100, 100, 100])
-
-    print(tmp_bbox1)
-    print(tmp_bbox2)
-
-    iou = bbox_iou(tmp_bbox1, tmp_bbox2, GIoU=True)
-    print(iou)
-
-    iou = bbox_iou(tmp_bbox1, tmp_bbox2, DIoU=True)
-    print(iou)
-
-    iou = bbox_iou(tmp_bbox1, tmp_bbox2, CIoU=True)
+    tbox = torch.zeros((1, 4))
+    tbox[0, :] = torch.tensor([0.5, 0.5, 4, 4])
+    pbox = torch.zeros((1, 4))
+    pbox[0, :] = torch.tensor([0.55, 0.55, 5, 5])
+    iou = bbox_iou(tbox, pbox, x1y1x2y2=True, CIoU=True)
     print(iou)

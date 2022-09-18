@@ -72,7 +72,6 @@ class YoloV2Loss(nn.Module):
             tconf = tconf.cuda()
             tcls = tcls.cuda()
 
-        
         # ============================ #
         #   FOR BOX COORDINATES Loss   #
         # ============================ #

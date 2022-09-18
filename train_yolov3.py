@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
-import torchsummary
+from torchinfo import summary
 
 from dataset.detection.yolov3_dataset import YoloV3DataModule
 from module.yolov3_detector import YoloV3Detector
@@ -24,15 +24,20 @@ def train(cfg):
         batch_size=cfg['batch_size']
     )
 
-    backbone = get_model(cfg['backbone'])()
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'],
+        features_only=True,
+        out_indices=[3, 4, 5]
+    )
     
     model = YoloV3(
-        backbone=backbone,
+        backbone_features_module=backbone_features_module,
         num_classes=cfg['num_classes'],
         num_anchors=len(cfg['anchors'])
     )
     
-    torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
+    summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']), device='cpu')
 
     model_module = YoloV3Detector(
         model=model, 
@@ -48,7 +53,7 @@ def train(cfg):
         ),
         EarlyStopping(
             monitor='val_loss',
-            patience=20,
+            patience=30,
             verbose=True
         )
     ]
@@ -58,7 +63,7 @@ def train(cfg):
         logger=TensorBoardLogger(cfg['save_dir'], make_model_name(cfg), default_hp_metric=False),
         accelerator=cfg['accelerator'],
         devices=cfg['devices'],
-        plugins=DDPPlugin(find_unused_parameters=True) if platform.system() != 'Windows' else None,
+        plugins=DDPPlugin(find_unused_parameters=False) if platform.system() != 'Windows' else None,
         callbacks=callbacks,
         **cfg['trainer_options']
     )

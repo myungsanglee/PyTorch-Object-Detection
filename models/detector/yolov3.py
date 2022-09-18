@@ -4,19 +4,20 @@ sys.path.append(os.getcwd())
 
 import torch
 from torch import nn
-import torchsummary
+from torchinfo import summary
+import timm
 
-from models.layers.conv_block import Conv2dBnRelu
 from utils.module_select import get_model
+from models.layers.conv_block import Conv2dBnRelu
 
 
 class YoloV3(nn.Module):
-    def __init__(self, backbone, num_classes, num_anchors):
+    def __init__(self, backbone_features_module, num_classes, num_anchors):
         super().__init__()
 
         assert num_anchors == 9
 
-        self.backbone = backbone
+        self.backbone_features_module = backbone_features_module
         self.num_classes = num_classes
         self.num_anchors = int(num_anchors/3)
 
@@ -68,17 +69,12 @@ class YoloV3(nn.Module):
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 
-        # self.dropout = nn.Dropout2d(0.5)
+        self.dropout = nn.Dropout2d(0.5)
 
     def forward(self, x):
         # backbone forward
-        x = self.backbone.stem(x)
-        c1 = self.backbone.layer1(x)
-        c2 = self.backbone.layer2(c1)
-        c3 = self.backbone.layer3(c2) # [batch_size, 256, input_size/8, input_size/8]
-        c4 = self.backbone.layer4(c3) # [batch_size, 512, input_size/16, input_size/16]
-        c5 = self.backbone.layer5(c4) # [batch_size, 1024, input_size/32, input_size/32]
-
+        c3, c4, c5 = self.backbone_features_module(x)
+        
         # Prediction Branch
         c5 = self.c5_conv(c5)
         # c5 = self.dropout(c5)
@@ -103,16 +99,15 @@ class YoloV3(nn.Module):
 
 if __name__ == '__main__':
     input_size = 416
-
-    backbone = get_model('darknet19')()
+    tmp_input = torch.randn((1, 3, input_size, input_size))
+    
+    backbone_features_module = get_model('darknet19')(pretrained='tiny-imagenet', features_only=True, out_indices=[3, 4, 5])
 
     model = YoloV3(
-        backbone=backbone,
+        backbone_features_module=backbone_features_module,
         num_classes=20,
         num_anchors=9
     )
-
-    tmp_input = torch.randn((1, 3, input_size, input_size))
 
     p3, p4, p5 = model(tmp_input)
 
@@ -120,8 +115,31 @@ if __name__ == '__main__':
     print(f'p4: {p4.size()}')
     print(f'p5: {p5.size()}')
 
-    torchsummary.summary(model, (3, input_size, input_size), batch_size=1, device='cpu')
+    summary(model, input_size=(1, 3, input_size, input_size), device='cpu')
 
+
+    '''
+    Check param values
+    '''
+    # for name, module in model.named_children():
+    #     print(name)
+    #     # print(module)
+    #     for n, child in module.named_children():
+    #         print(n)
+    #         print(child)
+    #         for param in child.parameters():
+    #             print(param[10, 2, 2, :])
+    #             print(param[-1, -1, -1, :])
+    #             print(param.requires_grad)
+    #             break
+    #         break
+    #     break
+    # print('')
+    
+
+    '''
+    Convert to onnx
+    '''
     # from module.yolov3_detector import YoloV3Detector
     # from utils.yaml_helper import get_configs
 

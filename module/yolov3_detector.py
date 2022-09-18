@@ -13,7 +13,7 @@ class YoloV3Detector(pl.LightningModule):
         self.loss_fn_p3 = YoloV3Loss(cfg['num_classes'], cfg['anchors'][:3], cfg['input_size'])
         self.loss_fn_p4 = YoloV3Loss(cfg['num_classes'], cfg['anchors'][3:6], cfg['input_size'])
         self.loss_fn_p5 = YoloV3Loss(cfg['num_classes'], cfg['anchors'][6:], cfg['input_size'])
-        self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['anchors'], cfg['input_size'])
+        self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['anchors'], cfg['input_size'], cfg['conf_threshold'])
 
     def forward(self, x):
         predictions = self.model(x)
@@ -25,6 +25,7 @@ class YoloV3Detector(pl.LightningModule):
         loss_p4 = self.loss_fn_p4(p4, batch['annot'])
         loss_p5 = self.loss_fn_p5(p5, batch['annot'])
         loss = loss_p3 + loss_p4 + loss_p5
+        # loss = (loss_p3 + loss_p4 + loss_p5) / 3
 
         self.log('train_loss', loss, prog_bar=True, logger=True)
 
@@ -39,6 +40,7 @@ class YoloV3Detector(pl.LightningModule):
         loss_p4 = self.loss_fn_p4(p4, batch['annot'])
         loss_p5 = self.loss_fn_p5(p5, batch['annot'])
         loss = loss_p3 + loss_p4 + loss_p5
+        # loss = (loss_p3 + loss_p4 + loss_p5) / 3
 
         self.log('val_loss', loss, prog_bar=True, logger=True)
 

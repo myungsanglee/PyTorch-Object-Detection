@@ -574,7 +574,7 @@ class MeanAveragePrecision:
 
     def update_state(self, y_true, y_pred):
         true_boxes = get_target_boxes_for_map(y_true, self._input_size)
-        
+
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
@@ -582,22 +582,22 @@ class MeanAveragePrecision:
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()
-            pred_concat = torch.concat([pred_img_idx, pred_nms], dim=1)
+            pred_concat = torch.cat([pred_img_idx, pred_nms], dim=1)
 
             true_nms = true_boxes[int(idx)]
-            true_nms = true_nms.cuda()
-
+            if pred_nms.is_cuda:
+                true_nms = true_nms.cuda()
             true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if true_nms.is_cuda:
                 true_img_idx = true_img_idx.cuda()
-            true_concat = torch.concat([true_img_idx, true_nms], dim=1)
+            true_concat = torch.cat([true_img_idx, true_nms], dim=1)
             
             if self._img_idx == 0.:
                 self._all_true_boxes_variable = true_concat
                 self._all_pred_boxes_variable = pred_concat
             else:
-                self._all_true_boxes_variable = torch.concat([self._all_true_boxes_variable, true_concat], axis=0)
-                self._all_pred_boxes_variable = torch.concat([self._all_pred_boxes_variable, pred_concat], axis=0)
+                self._all_true_boxes_variable = torch.cat([self._all_true_boxes_variable, true_concat], axis=0)
+                self._all_pred_boxes_variable = torch.cat([self._all_pred_boxes_variable, pred_concat], axis=0)
 
             self._img_idx += 1
 
