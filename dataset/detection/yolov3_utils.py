@@ -301,7 +301,7 @@ def decode_predictions(input, num_classes, anchors, input_size):
                 cx, cy, w, h values are input_size scale
     """
     batch_size, _, layer_h, layer_w = input.size()
-    num_anchors = len(scaled_anchors)
+    num_anchors = len(anchors)
     stride_h = input_size / layer_h
     stride_w = input_size / layer_w
     scaled_anchors = [[anchor_w / stride_w, anchor_h / stride_h] for anchor_w, anchor_h in anchors]
@@ -312,10 +312,10 @@ def decode_predictions(input, num_classes, anchors, input_size):
     FloatTensor = torch.cuda.FloatTensor if prediction.is_cuda else torch.FloatTensor
     
     stride = FloatTensor([stride_w, stride_h] * 2)
-
+    
     scaled_anchors = FloatTensor(scaled_anchors).unsqueeze(dim=0)
     scaled_anchors = scaled_anchors.repeat(batch_size, 1, 1).repeat(1, 1, layer_h*layer_w).view(batch_size, num_anchors, layer_h, layer_w, 2)
-
+    
     grid_x = torch.arange(0, layer_w).repeat(layer_h, 1).repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
     grid_y = torch.arange(0, layer_w).repeat(layer_h, 1).t().repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
     grid_xy = torch.cat([grid_x, grid_y], dim=-1) # [batch_size, num_anchors, layer_h, layer_w, 2]
