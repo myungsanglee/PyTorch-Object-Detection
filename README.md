@@ -34,6 +34,7 @@ python test_yolov2.py --cfg configs/yolov2-voc.yaml
 - Darknet을 벗어나기 위한 프로젝트
 - YOLO V2를 처음부터 만들어서 훈련까지 PyTorch로 구현하는 것이 목표
 - Darknet으로 훈련한 모델과 mAP가 비슷하게 나오게 하는 것이 목표
+- Pretrained Weights 사용하지 않고 처음부터 훈련
 
 ### 데이터셋
 | Train Dataset | Validation Dataset |
