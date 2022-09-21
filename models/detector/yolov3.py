@@ -42,13 +42,15 @@ class YoloV3(nn.Module):
         self.c4_route = nn.Sequential(
             Conv2dBnRelu(256, 128, 3),
             
-            nn.Upsample(scale_factor=2)
+            # nn.Upsample(scale_factor=2)
+            nn.Upsample(scale_factor=2, mode='bilinear')
         )
 
         self.c5_route = nn.Sequential(
             Conv2dBnRelu(512, 256, 3),
 
-            nn.Upsample(scale_factor=2)
+            # nn.Upsample(scale_factor=2)
+            nn.Upsample(scale_factor=2, mode='bilinear')
         )
 
         self.p3_head = nn.Sequential(
@@ -77,21 +79,21 @@ class YoloV3(nn.Module):
         
         # Prediction Branch
         c5 = self.c5_conv(c5)
-        # c5 = self.dropout(c5)
+        c5 = self.dropout(c5)
         p5 = self.p5_head(c5)
 
         # Prediction Branch
         c5_route = self.c5_route(c5)
         c4 = torch.cat((c5_route, c4), 1) # [batch_size, 768, input_size/16, input_size/16]
         c4 = self.c4_conv(c4)
-        # c4 = self.dropout(c4)
+        c4 = self.dropout(c4)
         p4 = self.p4_head(c4)
 
         # Prediction Branch
         c4_route = self.c4_route(c4)
         c3 = torch.cat((c4_route, c3), 1) # [batch_size, 384, input_size/8, input_size/8]
         c3 = self.c3_conv(c3)
-        # c3 = self.dropout(c3)
+        c3 = self.dropout(c3)
         p3 = self.p3_head(c3)
 
         return p3, p4, p5
@@ -140,13 +142,21 @@ if __name__ == '__main__':
     '''
     Convert to onnx
     '''
-    # from module.yolov3_detector import YoloV3Detector
-    # from utils.yaml_helper import get_configs
+    from module.yolov3_detector import YoloV3Detector
+    from utils.yaml_helper import get_configs
 
-    # model = YoloV3Detector(
+    model = YoloV3Detector(
+        model=model,
+        cfg=get_configs('configs/yolov3_voc.yaml')
+    )
+    
+    # model = YoloV3Detector.load_from_checkpoint(
+    #     checkpoint_path='saved/yolov3_voc/version_0/checkpoints/epoch=189-step=41799.ckpt',
     #     model=model,
     #     cfg=get_configs('configs/yolov3_voc.yaml')
     # )
-    # file_path = 'model.onnx'
-    # input_sample = torch.randn((1, 3, 416, 416))
-    # model.to_onnx(file_path, input_sample, export_params=True)
+    
+    file_path = 'model.onnx'
+    input_sample = torch.randn((1, 3, 416, 416))
+    model.to_onnx(file_path, input_sample, export_params=True, opset_version=9)
+    

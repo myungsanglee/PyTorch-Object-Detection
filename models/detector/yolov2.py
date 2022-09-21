@@ -159,6 +159,14 @@ if __name__ == '__main__':
     #     model=model,
     #     cfg=get_configs('configs/yolov2_voc.yaml')
     # )
+    
+    # model = YoloV2Detector.load_from_checkpoint(
+    #     checkpoint_path='saved/yolov2_voc/version_165/checkpoints/epoch=184-step=40699.ckpt',
+    #     model=model,
+    #     cfg=get_configs('configs/yolov2_voc.yaml')
+    # )
+    
     # file_path = 'model.onnx'
     # input_sample = torch.randn((1, 3, 416, 416))
-    # model.to_onnx(file_path, input_sample, export_params=True)
+    # model.to_onnx(file_path, input_sample, export_params=True, opset_version=9)
+    
