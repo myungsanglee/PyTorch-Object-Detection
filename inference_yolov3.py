@@ -9,7 +9,7 @@ import cv2
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import get_tagged_img, DecodeYoloV3, get_target_boxes
+from dataset.detection.yolov3_utils import get_tagged_img, DecodeYoloV3, get_target_boxes, DecodeYoloV3V2, DecodeYoloV3V3
 from dataset.detection.yolov3_dataset import YoloV3DataModule
 from utils.module_select import get_model
 
@@ -52,6 +52,8 @@ def inference(cfg, ckpt):
     model_module.eval()
 
     yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder_v2 = DecodeYoloV3V2(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder_v3 = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
@@ -65,7 +67,9 @@ def inference(cfg, ckpt):
         with torch.no_grad():
             predictions = model_module(batch_x)
         boxes = yolov3_decoder(predictions)
-        print(f'Inference: {(time.time()-before)*1000:.2f}ms')
+        boxes_v2 = yolov3_decoder_v2(predictions)
+        boxes_v3 = yolov3_decoder_v3(predictions)
+        # print(f'Inference: {(time.time()-before)*1000:.2f}ms')
         
         # batch_x to img
         if torch.cuda.is_available:
@@ -75,13 +79,17 @@ def inference(cfg, ckpt):
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         
-        true_boxes = get_target_boxes(batch_y, 416)
+        # true_boxes = get_target_boxes(batch_y, 416)
         
         pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
-        true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
+        pred_img_v2 = get_tagged_img(img.copy(), boxes_v2, cfg['names'], (0, 255, 0))
+        pred_img_v3 = get_tagged_img(img.copy(), boxes_v3, cfg['names'], (0, 255, 0))
+        # true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('Prediction', pred_img)
-        cv2.imshow('GT', true_img)
+        cv2.imshow('Prediction V2', pred_img_v2)
+        cv2.imshow('Prediction V3', pred_img_v3)
+        # cv2.imshow('GT', true_img)
         key = cv2.waitKey(0)
         if key == 27:
             break
