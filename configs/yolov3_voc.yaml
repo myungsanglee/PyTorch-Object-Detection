@@ -22,8 +22,8 @@ conf_threshold: 0.25
 epochs: 365
 
 train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
-val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
-# val_list : '/home/fssv2/myungsang/datasets/tmp/val.txt'
+# val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
+val_list : '/home/fssv2/myungsang/datasets/tmp/val.txt'
 names : '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'
 workers: 32 # number of workers to generate data
 batch_size: 64
@@ -36,7 +36,7 @@ trainer_options:
   num_sanity_val_steps: 0
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'sgd'
 optimizer_options:

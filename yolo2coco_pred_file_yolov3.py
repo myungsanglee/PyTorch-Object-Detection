@@ -17,7 +17,7 @@ from dataset.detection.yolov3_dataset import YoloV3DataModule
 from utils.module_select import get_model
 
 
-def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path,  save_dir):
+def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path, save_dir):
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
 
@@ -30,9 +30,7 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path,  save_di
     cats = coco.loadCats(coco.getCatIds())
 
     imgs_info = [[img['id'], img['file_name'], img['width'], img['height']] for img in imgs]
-    cats_ids_names = [[cat['id'], cat['name']] for cat in cats]
-    cats_names = [cat['name'] for cat in cats]
-    cats_dict = dict(cats_ids_names)
+    cats_dict = dict([[cat['name'], cat['id']] for cat in cats])
 
     backbone_features_module = get_model(cfg['backbone'])(
         pretrained=cfg['backbone_pretrained'], 
@@ -60,8 +58,7 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path,  save_di
     yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     with open(cfg['names'], 'r') as f:
-        class_name_list = f.readlines()
-    class_name_list = [x.strip() for x in class_name_list]
+        class_name_list = f.read().splitlines()
     
     results = []
     results_json_path = os.path.join(save_dir, 'results.json')
@@ -98,11 +95,11 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path,  save_di
             
             results.append({
                 "image_id": img_id,
-                "category_id": int(bbox[-1]) + 1,
+                "category_id": cats_dict[class_name],
                 "bbox": [xmin, ymin, w, h],
                 "score": float(confidence_score)
             })
-        
+            
     with open(results_json_path, "w") as f:
         json.dump(results, f, indent=4)
 

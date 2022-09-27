@@ -51,9 +51,9 @@ def inference(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
-    yolov3_decoder_v2 = DecodeYoloV3V2(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
-    yolov3_decoder_v3 = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    # yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder = DecodeYoloV3V2(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    # yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
@@ -67,8 +67,6 @@ def inference(cfg, ckpt):
         with torch.no_grad():
             predictions = model_module(batch_x)
         boxes = yolov3_decoder(predictions)
-        boxes_v2 = yolov3_decoder_v2(predictions)
-        boxes_v3 = yolov3_decoder_v3(predictions)
         # print(f'Inference: {(time.time()-before)*1000:.2f}ms')
         
         # batch_x to img
@@ -79,17 +77,13 @@ def inference(cfg, ckpt):
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         
-        # true_boxes = get_target_boxes(batch_y, 416)
+        true_boxes = get_target_boxes(batch_y, 416)
         
         pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
-        pred_img_v2 = get_tagged_img(img.copy(), boxes_v2, cfg['names'], (0, 255, 0))
-        pred_img_v3 = get_tagged_img(img.copy(), boxes_v3, cfg['names'], (0, 255, 0))
-        # true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
+        true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('Prediction', pred_img)
-        cv2.imshow('Prediction V2', pred_img_v2)
-        cv2.imshow('Prediction V3', pred_img_v3)
-        # cv2.imshow('GT', true_img)
+        cv2.imshow('GT', true_img)
         key = cv2.waitKey(0)
         if key == 27:
             break

@@ -182,14 +182,14 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
     return boxes_after_nms
 
 
-def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
+def nms_v1(boxes, conf_threshold=0.25, iou_threshold=0.45):
     """Does Non Max Suppression given boxes
 
     Arguments:
         boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-        iou_threshold (float): threshold where predicted boxes is correct
         conf_threshold (float): threshold to remove predicted boxes
-
+        iou_threshold (float): threshold where predicted boxes is correct
+        
     Returns:
         Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
     """
@@ -227,13 +227,13 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
     return torch.stack(boxes_after_nms)
 
 
-def nms_v2(boxes, iou_threshold=0.5, conf_threshold=0.25):
+def nms_v2(boxes, conf_threshold=0.25, iou_threshold=0.45):
     """Does Non Max Suppression given boxes
 
     Arguments:
-        boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-        iou_threshold (float): threshold where predicted boxes is correct
+        boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]\
         conf_threshold (float): threshold to remove predicted boxes
+        iou_threshold (float): threshold where predicted boxes is correct
 
     Returns:
         Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
@@ -304,8 +304,8 @@ def nms_v2(boxes, iou_threshold=0.5, conf_threshold=0.25):
             h = np.maximum(0, yy2 - yy1)
             
             # compute the ratio of overlap
-            # overlap = (w * h) / area[idxs[:last]]
-            overlap = (w * h) / (area[idxs[:last]] + area[i] - (w*h))
+            overlap = (w * h) / area[idxs[:last]]
+            # overlap = (w * h) / (area[idxs[:last]] + area[i] - (w*h))
             
             # delete all indexes from the index list that have
             idxs = np.delete(idxs, np.concatenate(([last],
@@ -322,13 +322,13 @@ def nms_v2(boxes, iou_threshold=0.5, conf_threshold=0.25):
 
 
 from torchvision.ops import batched_nms
-def nms_v3(boxes, iou_threshold=0.5, conf_threshold=0.25):
+def nms_v3(boxes, conf_threshold=0.25, iou_threshold=0.45):
     """Does Non Max Suppression given boxes
 
     Arguments:
         boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-        iou_threshold (float): threshold where predicted boxes is correct
         conf_threshold (float): threshold to remove predicted boxes
+        iou_threshold (float): threshold where predicted boxes is correct
 
     Returns:
         Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
@@ -688,7 +688,7 @@ class DecodeYoloV3(nn.Module):
                 decode_preds = torch.cat([decode_preds, decode_pred], dim=1)
         
         # start = time.time()
-        boxes = non_max_suppression(decode_preds[0], conf_threshold=self.conf_threshold)
+        boxes = nms_v1(decode_preds[0], conf_threshold=self.conf_threshold)
         # print(f'Time: {1000*(time.time() - start)}ms')
         return boxes
 
@@ -783,7 +783,7 @@ class MeanAveragePrecision:
                 pred_boxes = torch.cat([pred_boxes, tmp_pred_boxes], dim=1)
 
         for idx in torch.arange(y_true.size(0)):
-            # pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=self._conf_threshold)
+            # pred_nms = nms_v1(pred_boxes[idx], conf_threshold=self._conf_threshold)
             # pred_nms = nms_v2(pred_boxes[idx], conf_threshold=self._conf_threshold)
             pred_nms = nms_v3(pred_boxes[idx], conf_threshold=self._conf_threshold)
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
@@ -832,7 +832,7 @@ if __name__ == '__main__':
     tmp_boxes = torch.randn((500, 6))
     
     start = time.time()
-    box_1 = non_max_suppression(tmp_boxes)
+    box_1 = nms_v1(tmp_boxes)
     print(f'Time: {1000*(time.time() - start)}ms')
     # print(box_1)
     
