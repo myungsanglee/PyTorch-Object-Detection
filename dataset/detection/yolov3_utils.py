@@ -7,6 +7,7 @@ import math
 
 import torch
 from torch import nn
+from torchvision.ops import batched_nms
 import numpy as np
 import cv2
 
@@ -321,7 +322,6 @@ def nms_v2(boxes, conf_threshold=0.25, iou_threshold=0.45):
     return boxes_after_nms
 
 
-from torchvision.ops import batched_nms
 def nms_v3(boxes, conf_threshold=0.25, iou_threshold=0.45):
     """Does Non Max Suppression given boxes
 

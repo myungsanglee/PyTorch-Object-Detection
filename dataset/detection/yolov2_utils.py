@@ -7,6 +7,7 @@ import math
 
 import torch
 from torch import nn
+from torchvision.ops import batched_nms
 import numpy as np
 import cv2
 
@@ -182,13 +183,13 @@ def non_max_suppression_numpy(boxes, iou_threshold=0.5, conf_threshold=0.5):
     return boxes_after_nms
 
 
-def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
+def nms_v1(boxes, conf_threshold=0.25, iou_threshold=0.45):
     """Does Non Max Suppression given boxes
 
     Arguments:
         boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-        iou_threshold (float): threshold where predicted boxes is correct
         conf_threshold (float): threshold to remove predicted boxes
+        iou_threshold (float): threshold where predicted boxes is correct
 
     Returns:
         Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
@@ -225,6 +226,130 @@ def non_max_suppression(boxes, iou_threshold=0.5, conf_threshold=0.25):
             break
 
     return torch.stack(boxes_after_nms)
+
+
+def nms_v2(boxes, conf_threshold=0.25, iou_threshold=0.45):
+    """Does Non Max Suppression given boxes
+
+    Arguments:
+        boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]\
+        conf_threshold (float): threshold to remove predicted boxes
+        iou_threshold (float): threshold where predicted boxes is correct
+
+    Returns:
+        Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
+    """
+    if boxes.is_cuda:
+        device = boxes.device
+        boxes = boxes.cpu().numpy()
+    else:
+        device = None
+        boxes = boxes.numpy()
+        
+    # boxes smaller than the conf_threshold are removed
+    boxes = boxes[np.where(boxes[..., 4] > conf_threshold)[0]]
+
+    if boxes.shape[0] == 0:
+        if device is not None:
+            boxes = torch.cuda.FloatTensor(boxes, device=device)
+        else:
+            boxes = torch.FloatTensor(boxes, device='cpu')
+        return boxes
+    
+    # get unique class idx
+    classes_idx = np.unique(boxes[..., 5])
+    
+    # get boxes after nms
+    boxes_after_nms = np.zeros((0, 6))
+    
+    for class_idx in classes_idx:
+        # get specific class boxes
+        tmp_boxes = boxes[np.where(boxes[..., 5] == class_idx)[0]]
+        
+        # initialize the list of picked indexes	
+        pick = []
+        
+        # grab the coordinates of the bounding boxes
+        x1 = tmp_boxes[..., 0] - (tmp_boxes[..., 2] / 2)
+        y1 = tmp_boxes[..., 1] - (tmp_boxes[..., 3] / 2)
+        x2 = tmp_boxes[..., 0] + (tmp_boxes[..., 2] / 2)
+        y2 = tmp_boxes[..., 1] + (tmp_boxes[..., 3] / 2)
+                        
+        # compute the area of the bounding boxes and sort the bounding
+        # boxes by confidence score
+        # area = (x2 - x1 + 1) * (y2 - y1 + 1)
+        area = (x2 - x1) * (y2 - y1)
+        idxs = np.argsort(tmp_boxes[..., 4])
+        
+        # keep looping while some indexes still remain in the indexes
+        # list
+        while len(idxs) > 0:
+            # grab the last index in the indexes list and add the
+            # index value to the list of picked indexes
+            last = len(idxs) - 1
+            i = idxs[last]
+            pick.append(i)
+            
+            # find the largest (x, y) coordinates for the start of
+            # the bounding box and the smallest (x, y) coordinates
+            # for the end of the bounding box
+            xx1 = np.maximum(x1[i], x1[idxs[:last]])
+            yy1 = np.maximum(y1[i], y1[idxs[:last]])
+            xx2 = np.minimum(x2[i], x2[idxs[:last]])
+            yy2 = np.minimum(y2[i], y2[idxs[:last]])
+            
+            # compute the width and height of the bounding box
+            # w = np.maximum(0, xx2 - xx1 + 1)
+            # h = np.maximum(0, yy2 - yy1 + 1)
+            w = np.maximum(0, xx2 - xx1)
+            h = np.maximum(0, yy2 - yy1)
+            
+            # compute the ratio of overlap
+            # overlap = (w * h) / area[idxs[:last]]
+            overlap = (w * h) / (area[idxs[:last]] + area[i] - (w*h))
+            
+            # delete all indexes from the index list that have
+            idxs = np.delete(idxs, np.concatenate(([last],
+                np.where(overlap > iou_threshold)[0])))
+        
+        boxes_after_nms = np.concatenate([boxes_after_nms, tmp_boxes[pick]], axis=0)
+    
+    if device is not None:
+        boxes_after_nms = torch.cuda.FloatTensor(boxes_after_nms, device=device)
+    else:
+        boxes_after_nms = torch.FloatTensor(boxes_after_nms, device='cpu')
+    
+    return boxes_after_nms
+
+
+def nms_v3(boxes, conf_threshold=0.25, iou_threshold=0.45):
+    """Does Non Max Suppression given boxes
+
+    Arguments:
+        boxes (Tensor): All boxes with each grid '(None, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
+        conf_threshold (float): threshold to remove predicted boxes
+        iou_threshold (float): threshold where predicted boxes is correct
+
+    Returns:
+        Tensor: boxes after performing NMS given a specific IoU threshold '(None, 6)'
+    """
+
+    # boxes smaller than the conf_threshold are removed
+    boxes = boxes[torch.where(boxes[..., 4] > conf_threshold)[0]]
+
+    if boxes.shape[0] == 0:
+        return boxes
+    
+    x1 = (boxes[..., 0] - (boxes[..., 2] / 2)).unsqueeze(dim=-1)
+    y1 = (boxes[..., 1] - (boxes[..., 3] / 2)).unsqueeze(dim=-1)
+    x2 = (boxes[..., 0] + (boxes[..., 2] / 2)).unsqueeze(dim=-1)
+    y2 = (boxes[..., 1] + (boxes[..., 3] / 2)).unsqueeze(dim=-1)
+    x1y1x2y2 = torch.cat([x1, y1, x2, y2], dim=-1)
+    
+    # get boxes after nms
+    boxes_after_nms = batched_nms(x1y1x2y2, boxes[..., 4], boxes[..., 5], iou_threshold)
+    
+    return boxes[boxes_after_nms]
 
 
 # def decode_predictions(input, num_classes, scaled_anchors, input_size):
@@ -553,7 +678,9 @@ class DecodeYoloV2(nn.Module):
     def forward(self, x):
         assert x.size(0) == 1
         decode_pred = decode_predictions(x, self.num_classes, self.scaled_anchors, self.input_size)
-        boxes = non_max_suppression(decode_pred[0], conf_threshold=self.conf_threshold)
+        # boxes = nms_v1(decode_pred[0], conf_threshold=self.conf_threshold)
+        # boxes = nms_v2(decode_pred[0], conf_threshold=self.conf_threshold)
+        boxes = nms_v3(decode_pred[0], conf_threshold=self.conf_threshold)
         return boxes
 
 
@@ -578,7 +705,9 @@ class MeanAveragePrecision:
         pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
 
         for idx in torch.arange(y_true.size(0)):
-            pred_nms = non_max_suppression(pred_boxes[idx], conf_threshold=self._conf_threshold)
+            # pred_nms = nms_v1(pred_boxes[idx], conf_threshold=self._conf_threshold)
+            # pred_nms = nms_v2(pred_boxes[idx], conf_threshold=self._conf_threshold)
+            pred_nms = nms_v3(pred_boxes[idx], conf_threshold=self._conf_threshold)
             pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()

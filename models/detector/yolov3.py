@@ -69,7 +69,7 @@ class YoloV3(nn.Module):
             nn.Conv2d(1024, (self.num_anchors*(self.num_classes + 5)), 1, 1, bias=False)
         )
 
-        self.dropout = nn.Dropout2d(0.3)
+        # self.dropout = nn.Dropout2d(0.3)
 
     def forward(self, x):
         # backbone forward
@@ -140,13 +140,13 @@ if __name__ == '__main__':
     '''
     Convert to onnx
     '''
-    from module.yolov3_detector import YoloV3Detector
-    from utils.yaml_helper import get_configs
+    # from module.yolov3_detector import YoloV3Detector
+    # from utils.yaml_helper import get_configs
 
-    model = YoloV3Detector(
-        model=model,
-        cfg=get_configs('configs/yolov3_voc.yaml')
-    )
+    # model = YoloV3Detector(
+    #     model=model,
+    #     cfg=get_configs('configs/yolov3_voc.yaml')
+    # )
     
     # model = YoloV3Detector.load_from_checkpoint(
     #     checkpoint_path='saved/yolov3_voc/version_0/checkpoints/epoch=189-step=41799.ckpt',
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     #     cfg=get_configs('configs/yolov3_voc.yaml')
     # )
     
-    file_path = 'model.onnx'
-    input_sample = torch.randn((1, 3, 416, 416))
-    model.to_onnx(file_path, input_sample, export_params=True, opset_version=9)
+    # file_path = 'model.onnx'
+    # input_sample = torch.randn((1, 3, 416, 416))
+    # model.to_onnx(file_path, input_sample, export_params=True, opset_version=9)
     

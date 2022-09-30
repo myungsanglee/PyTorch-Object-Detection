@@ -26,15 +26,15 @@ class YoloV3Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 20
+        self.lambda_obj = 5
         self.lambda_noobj = 1
-        self.lambda_coord = 10
+        self.lambda_coord = 1
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
 
-        self.mse_loss = nn.MSELoss(reduction='mean')
-        self.bce_loss = nn.BCELoss(reduction='mean')
+        self.mse_loss = nn.MSELoss(reduction='sum')
+        self.bce_loss = nn.BCELoss(reduction='sum')
         # self.fc_loss = FocalLoss(reduction='mean')
 
     def forward(self, input, target):
@@ -83,13 +83,13 @@ class YoloV3Loss(nn.Module):
         # ==================== #
         #   FOR OBJECT LOSS    #
         # ==================== #
-        object_loss = self.lambda_obj * self.bce_loss(pconf * mask, tconf)
+        object_loss = self.lambda_obj * self.mse_loss(pconf * mask, tconf)
         # print(f'object_loss: {object_loss}')
         
         # ======================= #
         #   FOR NO OBJECT LOSS    #
         # ======================= #
-        no_object_loss = self.lambda_noobj * self.bce_loss(pconf * noobj_mask, noobj_mask * 0.0)
+        no_object_loss = self.lambda_noobj * self.mse_loss(pconf * noobj_mask, noobj_mask * 0.0)
         # print(f'no_object_loss: {no_object_loss}')
         
         # ================== #
@@ -99,7 +99,8 @@ class YoloV3Loss(nn.Module):
         # class_loss = self.lambda_class * self.fc_loss(pcls[mask==1], tcls[mask==1])
         # print(f'class_loss: {class_loss}\n')
         
-        loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+        # loss = (box_loss + object_loss + no_object_loss + class_loss) * batch_size
+        loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
 
         return loss
 
