@@ -72,7 +72,7 @@ def inference(cfg, ckpt):
 
         if torch.cuda.is_available:
             batch_x = batch_x.cuda()
-        
+            
         before = time.time()
         with torch.no_grad():
             predictions = model_module(batch_x)
@@ -102,11 +102,15 @@ def inference(cfg, ckpt):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', required=True, type=str, help='config file')
-    parser.add_argument('--ckpt', required=True, type=str, help='checkpoints file')
-    args = parser.parse_args()
-    cfg = get_configs(args.cfg)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--cfg', required=True, type=str, help='config file')
+    # parser.add_argument('--ckpt', required=True, type=str, help='checkpoints file')
+    # args = parser.parse_args()
+    # cfg = get_configs(args.cfg)
 
-    inference(cfg, args.ckpt)
+    # inference(cfg, args.ckpt)
     
+    inference(
+        get_configs('configs/yolov2_voc.yaml'), 
+        'saved/yolov2_voc/version_180/checkpoints/epoch=189-step=41799.ckpt'
+    )

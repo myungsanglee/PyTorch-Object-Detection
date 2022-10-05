@@ -10,10 +10,9 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
 from utils.yaml_helper import get_configs
-from module.yolov3_detector import YoloV3Detector
-from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import DecodeYoloV3V3
-from dataset.detection.yolov3_dataset import YoloV3DataModule
+from module.yolov2_detector import YoloV2Detector
+from models.detector.yolov2 import YoloV2
+from dataset.detection.yolov2_utils import DecodeYoloV2
 from utils.module_select import get_model
 
 
@@ -36,26 +35,26 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path, save_dir
         pretrained=cfg['backbone_pretrained'], 
         devices=cfg['devices'], 
         features_only=True, 
-        out_indices=[3, 4, 5]
+        out_indices=[4, 5]
     )
     
-    model = YoloV3(
+    model = YoloV2(
         backbone_features_module=backbone_features_module,
         num_classes=cfg['num_classes'],
-        num_anchors=len(cfg['anchors'])
+        num_anchors=len(cfg['scaled_anchors'])
     )
 
     if torch.cuda.is_available:
         model = model.cuda()
     
-    model_module = YoloV3Detector.load_from_checkpoint(
+    model_module = YoloV2Detector.load_from_checkpoint(
         checkpoint_path=ckpt,
         model=model, 
         cfg=cfg
     )
     model_module.eval()
 
-    yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov2_decoder = DecodeYoloV2(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     with open(cfg['names'], 'r') as f:
         class_name_list = f.read().splitlines()
@@ -72,14 +71,14 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path, save_dir
         img = np.expand_dims(img, axis=0)
         img = np.transpose(img, (0, 3, 1, 2))
         img = img.astype(np.float32) / 255.
-        batch_x = torch.FloatTensor(img)
+        batch_x = torch.FloatTensor(img).contiguous()
 
         if torch.cuda.is_available:
             batch_x = batch_x.cuda()
-        
+            
         with torch.no_grad():
             predictions = model_module(batch_x)
-        boxes = yolov3_decoder(predictions)
+        boxes = yolov2_decoder(predictions)
         
         for bbox in boxes:
             class_name = class_name_list[int(bbox[-1])]
@@ -103,6 +102,8 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path, save_dir
     with open(results_json_path, "w") as f:
         json.dump(results, f, indent=4)
 
+    img_ids = sorted(coco.getImgIds())
+    cat_ids = sorted(coco.getCatIds())
 
     # load detection JSON file from the disk
     cocovalPrediction = coco.loadRes(results_json_path)
@@ -112,6 +113,9 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path, save_dir
 	
 	# run evaluation for each image, accumulates per image results
 	# display the summary metrics of the evaluation
+    cocoEval.params.imgIds  = img_ids
+    cocoEval.params.catIds = cat_ids
+    # cocoEval.params.catIds = [1] # person id : 1
     cocoEval.evaluate()
     cocoEval.accumulate()
     cocoEval.summarize()
@@ -127,4 +131,4 @@ if __name__ == '__main__':
     cfg = get_configs(args.cfg)
 
     make_pred_result_file_for_coco_map_calculator(cfg, args.ckpt, args.json, args.save_dir)
-
+    

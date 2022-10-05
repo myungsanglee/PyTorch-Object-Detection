@@ -52,8 +52,8 @@ def inference(cfg, ckpt):
     model_module.eval()
 
     # yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
-    yolov3_decoder = DecodeYoloV3V2(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
-    # yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    # yolov3_decoder = DecodeYoloV3V2(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
@@ -67,7 +67,7 @@ def inference(cfg, ckpt):
         with torch.no_grad():
             predictions = model_module(batch_x)
         boxes = yolov3_decoder(predictions)
-        # print(f'Inference: {(time.time()-before)*1000:.2f}ms')
+        print(f'Inference: {(time.time()-before)*1000:.2f}ms')
         
         # batch_x to img
         if torch.cuda.is_available:

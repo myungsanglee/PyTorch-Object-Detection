@@ -148,7 +148,7 @@ class YoloV2Loss(nn.Module):
         th = torch.zeros(batch_size, num_anchors, layer_h, layer_w)
         tconf = torch.zeros(batch_size, num_anchors, layer_h, layer_w)
         tcls = torch.zeros(batch_size, num_anchors, layer_h, layer_w, num_classes)
-
+        
         for b in torch.arange(batch_size):
             for t in torch.arange(target.size(1)):
                 if target[b, t].sum() <= 0:
@@ -159,10 +159,10 @@ class YoloV2Loss(nn.Module):
                 gh = target[b, t, 3] * layer_h
                 gi = int(gx)
                 gj = int(gy)
-
+                
                 gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0) # [1, 4]
                 anchors_box = torch.cat([torch.zeros((num_anchors, 2), dtype=torch.float32), torch.FloatTensor(scaled_anchors)], 1) # [num_anchors, 4]
-
+                
                 calc_iou = bbox_iou(gt_box, anchors_box, x1y1x2y2=True) # [num_anchors, 1]
                 calc_iou = calc_iou.squeeze(dim=-1) # [num_anchors]
                 
@@ -179,7 +179,7 @@ class YoloV2Loss(nn.Module):
                 # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf
                 # tcls[b, best_n, gj, gi, :] = self.negative_class_target
                 # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
-
+        
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls    
 
 
@@ -198,7 +198,7 @@ class YoloV2LossV2(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 20
+        self.lambda_obj = 5
         self.lambda_noobj = 1
         self.lambda_coord = 0.5
         self.lambda_class = 1
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     tmp_pbox[0, 2, 6, 6, :] = torch.tensor([0.5498, 0.5498, 1.1052, 1.0101])
     tmp_tbox[0, 2, 6, 6, :] = torch.tensor([0.5, 0.5, 1.2856, 0.8026])
     tmp_mask[0, 2, 6, 6] = torch.tensor([1])
- 
+    
     iou = bbox_iou(tmp_tbox[tmp_mask.squeeze(dim=-1)==1], tmp_pbox[tmp_mask.squeeze(dim=-1)==1], CIoU=True)
     print(iou)
     print((1.0 - iou).mean())

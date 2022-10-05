@@ -64,7 +64,7 @@ class YoloV2DataModule(pl.LightningDataModule):
                 saturation=0.5,
                 hue=0.1
             ),
-            A.RandomResizedCrop(self.input_size, self.input_size, (0.4, 1), (0.4, 1.6)),
+            A.RandomResizedCrop(self.input_size, self.input_size, (0.5, 1), (0.4, 1.6)),
             A.Normalize(0, 1),
             ToTensorV2(),
         ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
