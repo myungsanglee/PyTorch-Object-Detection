@@ -238,7 +238,7 @@ class YoloV3LossV2(nn.Module):
                 th = th.cuda()
                 tconf = tconf.cuda()
                 tcls = tcls.cuda()
-
+            
             # ============================ #
             #   FOR BOX COORDINATES Loss   #
             # ============================ #
@@ -277,7 +277,7 @@ class YoloV3LossV2(nn.Module):
             # print(f'class_loss: {class_loss}\n')
             
             loss += box_loss + object_loss + no_object_loss + class_loss
-        
+            
         loss /= batch_size
         # loss *= batch_size
 

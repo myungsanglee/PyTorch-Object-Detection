@@ -36,13 +36,13 @@ trainer_options:
   num_sanity_val_steps: 0
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'sgd'
 optimizer_options:
   lr: 1e-3
   momentum: 0.9
-  weight_decay: 5e-3
+  weight_decay: 1e-2
   nesterov: True
 
 scheduler: 'yolo_lr'
