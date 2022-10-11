@@ -686,29 +686,29 @@ class DecodeYoloV2(nn.Module):
 
 class MeanAveragePrecision:
     def __init__(self, num_classes, scaled_anchors, input_size, conf_threshold):
-        self._all_true_boxes_variable = 0
-        self._all_pred_boxes_variable = 0
-        self._img_idx = 0
-        self._num_classes = num_classes
-        self._scaled_anchors = scaled_anchors
-        self._input_size = input_size
-        self._conf_threshold = conf_threshold
+        self.all_true_boxes_variable = 0
+        self.all_pred_boxes_variable = 0
+        self.img_idx = 0
+        self.num_classes = num_classes
+        self.scaled_anchors = scaled_anchors
+        self.input_size = input_size
+        self.conf_threshold = conf_threshold
 
     def reset_states(self):
-        self._all_true_boxes_variable = 0
-        self._all_pred_boxes_variable = 0
-        self._img_idx = 0
+        self.all_true_boxes_variable = 0
+        self.all_pred_boxes_variable = 0
+        self.img_idx = 0
 
     def update_state(self, y_true, y_pred):
-        true_boxes = get_target_boxes_for_map(y_true, self._input_size)
+        true_boxes = get_target_boxes_for_map(y_true, self.input_size)
 
-        pred_boxes = decode_predictions(y_pred, self._num_classes, self._scaled_anchors, self._input_size)
+        pred_boxes = decode_predictions(y_pred, self.num_classes, self.scaled_anchors, self.input_size)
 
         for idx in torch.arange(y_true.size(0)):
-            # pred_nms = nms_v1(pred_boxes[idx], conf_threshold=self._conf_threshold)
-            # pred_nms = nms_v2(pred_boxes[idx], conf_threshold=self._conf_threshold)
-            pred_nms = nms_v3(pred_boxes[idx], conf_threshold=self._conf_threshold)
-            pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self._img_idx
+            # pred_nms = nms_v1(pred_boxes[idx], conf_threshold=self.conf_threshold)
+            # pred_nms = nms_v2(pred_boxes[idx], conf_threshold=self.conf_threshold)
+            pred_nms = nms_v3(pred_boxes[idx], conf_threshold=self.conf_threshold)
+            pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self.img_idx
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()
             pred_concat = torch.cat([pred_img_idx, pred_nms], dim=1)
@@ -716,22 +716,22 @@ class MeanAveragePrecision:
             true_nms = true_boxes[int(idx)]
             if pred_nms.is_cuda:
                 true_nms = true_nms.cuda()
-            true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self._img_idx
+            true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self.img_idx
             if true_nms.is_cuda:
                 true_img_idx = true_img_idx.cuda()
             true_concat = torch.cat([true_img_idx, true_nms], dim=1)
             
-            if self._img_idx == 0.:
-                self._all_true_boxes_variable = true_concat
-                self._all_pred_boxes_variable = pred_concat
+            if self.img_idx == 0.:
+                self.all_true_boxes_variable = true_concat
+                self.all_pred_boxes_variable = pred_concat
             else:
-                self._all_true_boxes_variable = torch.cat([self._all_true_boxes_variable, true_concat], axis=0)
-                self._all_pred_boxes_variable = torch.cat([self._all_pred_boxes_variable, pred_concat], axis=0)
+                self.all_true_boxes_variable = torch.cat([self.all_true_boxes_variable, true_concat], axis=0)
+                self.all_pred_boxes_variable = torch.cat([self.all_pred_boxes_variable, pred_concat], axis=0)
 
-            self._img_idx += 1
+            self.img_idx += 1
 
     def result(self):
-        return mean_average_precision(self._all_true_boxes_variable, self._all_pred_boxes_variable, self._num_classes)
+        return mean_average_precision(self.all_true_boxes_variable, self.all_pred_boxes_variable, self.num_classes)
 
 
 if __name__ == '__main__':

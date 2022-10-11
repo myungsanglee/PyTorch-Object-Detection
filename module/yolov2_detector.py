@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 
 from utils.module_select import get_optimizer, get_scheduler
-from models.loss.yolov2_loss import YoloV2Loss, YoloV2LossV2
+from models.loss.yolov2_loss import YoloV2Loss
 from dataset.detection.yolov2_utils import MeanAveragePrecision
 
 
@@ -11,7 +11,6 @@ class YoloV2Detector(pl.LightningModule):
         self.save_hyperparameters(ignore='model')
         self.model = model
         self.loss_fn = YoloV2Loss(cfg['num_classes'], cfg['scaled_anchors'])
-        # self.loss_fn = YoloV2LossV2(cfg['num_classes'], cfg['scaled_anchors'])
         self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['scaled_anchors'], cfg['input_size'], cfg['conf_threshold'])
 
     def forward(self, x):
@@ -20,8 +19,9 @@ class YoloV2Detector(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         pred = self.model(batch['img'])
+        
         loss = self.loss_fn(pred, batch['annot'])
-
+        
         self.log('train_loss', loss, prog_bar=True, logger=True)
 
         return loss
@@ -31,8 +31,9 @@ class YoloV2Detector(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         pred = self.model(batch['img'])
+        
         loss = self.loss_fn(pred, batch['annot'])
-
+        
         self.log('val_loss', loss, prog_bar=True, logger=True)
 
         self.map_metric.update_state(batch['annot'], pred)        

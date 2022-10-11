@@ -5,11 +5,10 @@ import os
 import torch
 import numpy as np
 import cv2
-import timm
 
 from utils.yaml_helper import get_configs
 from module.yolov2_detector import YoloV2Detector
-from models.detector.yolov2 import YoloV2, Resnet34YoloV2
+from models.detector.yolov2 import YoloV2
 from dataset.detection.yolov2_utils import get_tagged_img, DecodeYoloV2, get_target_boxes
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from utils.module_select import get_model
@@ -29,30 +28,19 @@ def inference(cfg, ckpt):
     data_module.prepare_data()
     data_module.setup()
 
-    if cfg['backbone'] == 'darknet19':
-
-        backbone_features_module = get_model(cfg['backbone'])(
-            pretrained=cfg['backbone_pretrained'], 
-            devices=cfg['devices'],
-            features_only=True,
-            out_indices=[4, 5]
-        )
-        
-        model = YoloV2(
-            backbone_features_module=backbone_features_module,
-            num_classes=cfg['num_classes'],
-            num_anchors=len(cfg['scaled_anchors'])
-        )
-        
-    else:
-        backbone_feature_module = timm.create_model('resnet34', pretrained=True, features_only=True, out_indices=[3, 4])
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'],
+        features_only=True,
+        out_indices=[4, 5]
+    )
     
-        model = Resnet34YoloV2(
-            backbone_feature_module=backbone_feature_module,
-            num_classes=cfg['num_classes'],
-            num_anchors=len(cfg['scaled_anchors'])
-        )
-
+    model = YoloV2(
+        backbone_features_module=backbone_features_module,
+        num_classes=cfg['num_classes'],
+        num_anchors=len(cfg['scaled_anchors'])
+    )
+    
     if torch.cuda.is_available:
         model = model.cuda()
     
@@ -102,15 +90,11 @@ def inference(cfg, ckpt):
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--cfg', required=True, type=str, help='config file')
-    # parser.add_argument('--ckpt', required=True, type=str, help='checkpoints file')
-    # args = parser.parse_args()
-    # cfg = get_configs(args.cfg)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cfg', required=True, type=str, help='config file')
+    parser.add_argument('--ckpt', required=True, type=str, help='checkpoints file')
+    args = parser.parse_args()
+    cfg = get_configs(args.cfg)
 
-    # inference(cfg, args.ckpt)
+    inference(cfg, args.ckpt)
     
-    inference(
-        get_configs('configs/yolov2_voc.yaml'), 
-        'saved/yolov2_voc/version_180/checkpoints/epoch=189-step=41799.ckpt'
-    )

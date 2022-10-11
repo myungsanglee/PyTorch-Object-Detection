@@ -1,20 +1,18 @@
 import argparse
-import time
 import os
 
 import torch
-import numpy as np
-import cv2
+from tqdm import tqdm
 
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import get_tagged_img, DecodeYoloV3, get_target_boxes
+from dataset.detection.yolov3_utils import DecodeYoloV3V3
 from dataset.detection.yolov3_dataset import YoloV3DataModule
 from utils.module_select import get_model
 
 
-def inference(cfg, ckpt):
+def make_pred_result_file_for_public_map_calculator(cfg, ckpt, save_dir):
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
 
@@ -30,8 +28,8 @@ def inference(cfg, ckpt):
 
     backbone_features_module = get_model(cfg['backbone'])(
         pretrained=cfg['backbone_pretrained'], 
-        devices=cfg['devices'],
-        features_only=True,
+        devices=cfg['devices'], 
+        features_only=True, 
         out_indices=[3, 4, 5]
     )
     
@@ -51,50 +49,49 @@ def inference(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
+    with open(cfg['names'], 'r') as f:
+        class_name_list = f.readlines()
+    class_name_list = [x.strip() for x in class_name_list]
+
+    img_num = 0
     # Inference
-    for sample in data_module.val_dataloader():
+    for sample in tqdm(data_module.val_dataloader()):
         batch_x = sample['img']
-        batch_y = sample['annot']
 
         if torch.cuda.is_available:
             batch_x = batch_x.cuda()
         
-        before = time.time()
         with torch.no_grad():
             predictions = model_module(batch_x)
         boxes = yolov3_decoder(predictions)
-        print(f'Inference: {(time.time()-before)*1000:.2f}ms')
         
-        # batch_x to img
-        if torch.cuda.is_available:
-            img = batch_x.cpu()[0].numpy()   
-        else:
-            img = batch_x[0].numpy()   
-        img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        img_num += 1
+        pred_txt_fd = open(os.path.join(save_dir, f'{img_num:05d}.txt'), 'w')
         
-        true_boxes = get_target_boxes(batch_y, 416)
-        
-        pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
-        true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
+        for bbox in boxes:
+            class_name = class_name_list[int(bbox[-1])]
+            confidence_score = bbox[4]
+            cx = bbox[0]
+            cy = bbox[1]
+            w = bbox[2]
+            h = bbox[3]
+            xmin = int((cx - (w / 2)))
+            ymin = int((cy - (h / 2)))
+            xmax = int((cx + (w / 2)))
+            ymax = int((cy + (h / 2)))
 
-        cv2.imshow('Prediction', pred_img)
-        cv2.imshow('GT', true_img)
-        key = cv2.waitKey(0)
-        if key == 27:
-            break
-    
-    cv2.destroyAllWindows()
+            pred_txt_fd.write(f'{class_name} {confidence_score} {xmin} {ymin} {xmax} {ymax}\n')
+        pred_txt_fd.close()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', required=True, type=str, help='config file')
     parser.add_argument('--ckpt', required=True, type=str, help='checkpoints file')
+    parser.add_argument('--save_dir', required=True, type=str, help='save dir')
     args = parser.parse_args()
     cfg = get_configs(args.cfg)
 
-    inference(cfg, args.ckpt)
-    
+    make_pred_result_file_for_public_map_calculator(cfg, args.ckpt, args.save_dir)

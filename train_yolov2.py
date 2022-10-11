@@ -6,11 +6,10 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
 from torchinfo import summary
-import timm
 
 from dataset.detection.yolov2_dataset import YoloV2DataModule
 from module.yolov2_detector import YoloV2Detector
-from models.detector.yolov2 import YoloV2, Resnet34YoloV2
+from models.detector.yolov2 import YoloV2
 from utils.utility import make_model_name
 from utils.module_select import get_model
 from utils.yaml_helper import get_configs
@@ -25,29 +24,18 @@ def train(cfg):
         batch_size=cfg['batch_size']
     )
 
-    if cfg['backbone'] == 'darknet19':
-
-        backbone_features_module = get_model(cfg['backbone'])(
-            pretrained=cfg['backbone_pretrained'], 
-            devices=cfg['devices'],
-            features_only=True,
-            out_indices=[4, 5]
-        )
-        
-        model = YoloV2(
-            backbone_features_module=backbone_features_module,
-            num_classes=cfg['num_classes'],
-            num_anchors=len(cfg['scaled_anchors'])
-        )
-        
-    else:
-        backbone_feature_module = timm.create_model('resnet34', pretrained=True, features_only=True, out_indices=[3, 4])
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'],
+        features_only=True,
+        out_indices=[4, 5]
+    )
     
-        model = Resnet34YoloV2(
-            backbone_feature_module=backbone_feature_module,
-            num_classes=cfg['num_classes'],
-            num_anchors=len(cfg['scaled_anchors'])
-        )
+    model = YoloV2(
+        backbone_features_module=backbone_features_module,
+        num_classes=cfg['num_classes'],
+        num_anchors=len(cfg['scaled_anchors'])
+    )
     
     summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']), device='cpu')
 

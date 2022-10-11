@@ -1,8 +1,6 @@
 model : 'yolov2'
 backbone: 'darknet19'
-backbone_pretrained: '' # 'tiny-imagenet' or '' 
-# backbone_pretrained: 'tiny-imagenet' # 'tiny-imagenet' or '' 
-# backbone: 'resnet34'
+backbone_pretrained: '' # 'tiny-imagenet' or ''
 dataset_name : 'voc'
 input_size: 416
 in_channels: 3

@@ -1,1 +1,0 @@
-/home/fssv2/myungsang/my_projects/PyTorch-Object-Detection/data/test.jpg
