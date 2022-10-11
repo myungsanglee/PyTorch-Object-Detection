@@ -10,8 +10,8 @@ class YoloV3Detector(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(ignore='model')
         self.model = model
-        # self.loss_fn = YoloV3Loss(cfg['num_classes'], cfg['anchors'], cfg['input_size'])
-        self.loss_fn = YoloV3LossV2(cfg['num_classes'], cfg['anchors'], cfg['input_size'])
+        self.loss_fn = YoloV3Loss(cfg['num_classes'], cfg['anchors'], cfg['input_size'])
+        # self.loss_fn = YoloV3LossV2(cfg['num_classes'], cfg['anchors'], cfg['input_size'])
         self.map_metric = MeanAveragePrecision(cfg['num_classes'], cfg['anchors'], cfg['input_size'], cfg['conf_threshold'])
 
     def forward(self, x):
