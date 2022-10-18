@@ -78,3 +78,4 @@ if __name__ == '__main__':
     cfg = get_configs(args.cfg)
 
     train(cfg)
+

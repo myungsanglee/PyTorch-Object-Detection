@@ -204,7 +204,7 @@ class YoloV3LossV2(nn.Module):
         # pay loss for no object (noobj) and the box coordinates (coord)
         self.lambda_obj = 5
         self.lambda_noobj = 1
-        self.lambda_coord = 0.5
+        self.lambda_coord = 1
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
@@ -229,7 +229,7 @@ class YoloV3LossV2(nn.Module):
             
             # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
             prediction = pred.view(batch_size, 3, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-
+            
             pxy = torch.sigmoid(prediction[..., 0:2])
             pwh = torch.exp(prediction[..., 2:4])
             pbox = torch.cat([pxy, pwh], dim=-1)
