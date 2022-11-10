@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 
@@ -51,3 +52,19 @@ class Conv2dBn(nn.Module):
     def forward(self, x):
         y = self.conv(x)
         return self.bn(y)
+
+
+class V4TinyBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv1 = Conv2dBnRelu(in_channels, out_channels, 3, 1)
+        self.conv2 = Conv2dBnRelu(out_channels, out_channels, 3, 1)
+        self.conv3 = Conv2dBnRelu(out_channels*2, out_channels*2, 1, 1)
+
+    def forward(self, x):
+        y = self.conv1(x)
+        x = self.conv2(y)
+        x = torch.cat((x, y), dim=1)
+        x = self.conv3(x)
+        
+        return x
