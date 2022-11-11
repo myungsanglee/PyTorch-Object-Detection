@@ -1,6 +1,7 @@
 import argparse
 import platform
 
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
@@ -27,6 +28,10 @@ def train(cfg):
         num_classes=cfg['num_classes'],
         num_anchors=len(cfg['anchors'])
     )
+    
+    if cfg['backbone_pretrained']:
+        state_dict = torch.load(cfg['backbone_pretrained'])
+        model.load_state_dict(state_dict, False)
     
     summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']), device='cpu')
 
