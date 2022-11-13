@@ -497,7 +497,7 @@ def get_target_boxes_for_map(target, input_size):
         Dict: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
     """
     dst = dict()
-
+    
     for b in range(target.size(0)):
         tmp = []
         for t in torch.arange(target.size(1)):
@@ -510,6 +510,8 @@ def get_target_boxes_for_map(target, input_size):
 
             tmp.append([gx, gy, gw, gh, 1., target[b, t, 4]])
 
+        if not tmp:
+            tmp = np.zeros((0, 6))
         dst[b] = torch.FloatTensor(tmp)
 
     return dst
@@ -596,10 +598,10 @@ def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.
             else:
                 false_positive[detection_idx] = 1
 
-        tf_cumsum = torch.cumsum(true_positive, dim=0)
+        tp_cumsum = torch.cumsum(true_positive, dim=0)
         fp_cumsum = torch.cumsum(false_positive, dim=0)
-        recalls = tf_cumsum / (total_true_boxes + epsilon)
-        precisions = torch.divide(tf_cumsum, (tf_cumsum + fp_cumsum + epsilon))
+        recalls = tp_cumsum / (total_true_boxes + epsilon)
+        precisions = torch.divide(tp_cumsum, (tp_cumsum + fp_cumsum + epsilon))
         precisions = torch.cat((torch.tensor([1]), precisions))
         recalls = torch.cat((torch.tensor([0]), recalls))
         
@@ -731,7 +733,7 @@ class MeanAveragePrecision:
             if pred_nms.is_cuda:
                 pred_img_idx = pred_img_idx.cuda()
             pred_concat = torch.cat([pred_img_idx, pred_nms], dim=1)
-
+            
             true_nms = true_boxes[int(idx)]
             if pred_nms.is_cuda:
                 true_nms = true_nms.cuda()
