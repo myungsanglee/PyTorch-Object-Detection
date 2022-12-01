@@ -1,5 +1,6 @@
 import argparse
 import platform
+import os
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -14,6 +15,7 @@ from utils.utility import make_model_name
 from utils.module_select import get_model
 from utils.yaml_helper import get_configs
 
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def train(cfg):
     data_module = YoloV3DataModule(
