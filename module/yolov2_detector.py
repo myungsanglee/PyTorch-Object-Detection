@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 
 from utils.module_select import get_optimizer, get_scheduler
 from models.loss.yolov2_loss import YoloV2Loss, YoloV2LossV2
-from dataset.detection.yolov2_utils import MeanAveragePrecision
+from utils.yolov2_utils import MeanAveragePrecision
 
 
 class YoloV2Detector(pl.LightningModule):

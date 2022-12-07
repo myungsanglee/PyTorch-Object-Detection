@@ -12,7 +12,7 @@ from pycocotools.cocoeval import COCOeval
 from utils.yaml_helper import get_configs
 from module.yolov2_detector import YoloV2Detector
 from models.detector.yolov2 import YoloV2
-from dataset.detection.yolov2_utils import DecodeYoloV2
+from utils.yolov2_utils import DecodeYoloV2
 from utils.module_select import get_model
 
 

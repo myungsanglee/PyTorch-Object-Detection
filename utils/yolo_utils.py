@@ -1,12 +1,7 @@
-import sys
-import os
-sys.path.append(os.getcwd())
-import time
 from collections import Counter
 import math
 
 import torch
-from torch import nn
 from torchvision.ops import batched_nms
 import numpy as np
 import cv2
@@ -22,7 +17,7 @@ def collater(data):
 
     Returns:
         Dict: 정렬된 batch data.
-        'img': image tensor, [batch_size, channel, height, width] shape
+        'img': list of image tensor, [batch_size, channel, height, width] shape
         'annot': 동일 shape으로 정렬된 tensor, [batch_size, max_num_annots, 5(cx, cy, w, h, cid)] shape
     """
     imgs = [s['image'] for s in data]
@@ -352,171 +347,6 @@ def nms_v3(boxes, conf_threshold=0.25, iou_threshold=0.45):
     return boxes[boxes_after_nms]
 
 
-# def decode_predictions(input, num_classes, anchors, input_size):
-#     """decodes predictions of the YOLO v3 model
-    
-#     Convert predictions to boundig boxes info
-
-#     Arguments:
-#         input (Tensor): predictions of the YOLO v3 model with shape  '(batch, num_anchors*(5 + num_classes), layer_h, layer_w)'
-#         num_classes: Number of classes in the dataset
-#         anchors: Anchors of a specific dataset, [num_anchors, 2(anchor_w, anchor_h)]
-#         input_size: input size of Image
-
-#     Returns:
-#         Tensor: boxes after decoding predictions '(batch, num_anchors*layer_h*layer_w, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-#     """
-#     batch_size, _, layer_h, layer_w = input.size()
-#     num_anchors = len(anchors)
-#     stride_h = input_size / layer_h
-#     stride_w = input_size / layer_w
-#     scaled_anchors = [[anchor_w / stride_w, anchor_h / stride_h] for anchor_w, anchor_h in anchors]
-    
-#     # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
-#     prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-
-#     x = torch.sigmoid(prediction[..., 0])
-#     y = torch.sigmoid(prediction[..., 1])
-#     w = prediction[..., 2]
-#     h = prediction[..., 3]
-#     conf = torch.sigmoid(prediction[..., 4])
-#     pred_cls = torch.sigmoid(prediction[..., 5:])
-
-#     pred_cls = pred_cls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
-#     pred_cls = torch.argmax(pred_cls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
-
-#     FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-#     LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
-#     # Calculate offsets for each grid
-#     grid_x = torch.linspace(0, layer_w-1, layer_w).repeat(layer_w, 1).repeat(
-#         batch_size * num_anchors, 1, 1).view(x.size()).type(FloatTensor)
-#     grid_y = torch.linspace(0, layer_h-1, layer_h).repeat(layer_h, 1).t().repeat(
-#         batch_size * num_anchors, 1, 1).view(y.size()).type(FloatTensor)
-#     # Calculate anchor w, h
-#     anchor_w = FloatTensor(scaled_anchors).index_select(1, LongTensor([0]))
-#     anchor_h = FloatTensor(scaled_anchors).index_select(1, LongTensor([1]))
-#     anchor_w = anchor_w.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(w.size())
-#     anchor_h = anchor_h.repeat(batch_size, 1).repeat(1, 1, layer_h * layer_w).view(h.size())
-#     # Add offset and scale with anchors
-#     pred_boxes = FloatTensor(prediction[..., :4].size())
-#     pred_boxes[..., 0] = x + grid_x
-#     pred_boxes[..., 1] = y + grid_y
-#     pred_boxes[..., 2] = torch.exp(w) * anchor_w
-#     pred_boxes[..., 3] = torch.exp(h) * anchor_h
-#     # Results
-#     _scale = FloatTensor([stride_w, stride_h] * 2)
-#     output = torch.cat((pred_boxes.view(batch_size, -1, 4) * _scale, conf.view(batch_size, -1, 1), pred_cls), -1)
-    
-#     return output
-
-
-def decode_predictions(input, num_classes, anchors, input_size):
-    """decodes predictions of the YOLO v3 model
-    
-    Convert predictions to boundig boxes info
-
-    Arguments:
-        input (Tensor): predictions of the YOLO v3 model with shape  '(batch, num_anchors*(5 + num_classes), 13, 13)'
-        num_classes: Number of classes in the dataset
-        anchors: Anchors of a specific dataset, [num_anchors, 2(anchor_w, anchor_h)]
-        input_size: input size of Image
-
-    Returns:
-        Tensor: boxes after decoding predictions '(batch, num_anchors*13*13, 6)', specified as [cx, cy, w, h, confidence_score, class_idx]
-                cx, cy, w, h values are input_size scale
-    """
-    batch_size, _, layer_h, layer_w = input.size()
-    num_anchors = len(anchors)
-    stride_h = input_size / layer_h
-    stride_w = input_size / layer_w
-    scaled_anchors = [[anchor_w / stride_w, anchor_h / stride_h] for anchor_w, anchor_h in anchors]
-    
-    # [batch_size, num_anchors, 5+num_classes, layer_h, layer_w] to [batch_size, num_anchors, layer_h, layer_w, 5+num_classes]
-    prediction = input.view(batch_size, num_anchors, -1, layer_h, layer_w).permute(0, 1, 3, 4, 2).contiguous()
-    
-    FloatTensor = torch.cuda.FloatTensor if prediction.is_cuda else torch.FloatTensor
-    
-    stride = FloatTensor([stride_w, stride_h] * 2)
-    
-    scaled_anchors = FloatTensor(scaled_anchors).unsqueeze(dim=0)
-    scaled_anchors = scaled_anchors.repeat(batch_size, 1, 1).repeat(1, 1, layer_h*layer_w).view(batch_size, num_anchors, layer_h, layer_w, 2)
-    
-    grid_x = torch.arange(0, layer_w).repeat(layer_h, 1).repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
-    grid_y = torch.arange(0, layer_w).repeat(layer_h, 1).t().repeat(batch_size*num_anchors, 1, 1).view(batch_size, num_anchors, layer_h, layer_w, 1).type(FloatTensor)
-    grid_xy = torch.cat([grid_x, grid_y], dim=-1) # [batch_size, num_anchors, layer_h, layer_w, 2]
-    
-    pxy = torch.sigmoid(prediction[..., 0:2]) + grid_xy
-    pwh = torch.exp(prediction[..., 2:4]) * scaled_anchors
-    pbox = torch.cat([pxy, pwh], dim=-1)
-    pconf = torch.sigmoid(prediction[..., 4:5])
-    pcls = torch.sigmoid(prediction[..., 5:])
-
-    pbox = pbox.view(batch_size, -1, 4) # [batch_size, num_anchors*layer_h*layer_w, 4]
-    pbox *= stride # convert ouput scale to input scale
-    pconf = pconf.view(batch_size, -1, 1) # [batch_size, num_anchors*layer_h*layer_w, 1]
-    pcls = pcls.view(batch_size, -1, num_classes) # [batch_size, num_anchors*layer_h*layer_w, num_classes]
-    pcls = torch.argmax(pcls, dim=-1, keepdim=True) # [batch_size, num_anchors*layer_h*layer_w, 1]
-
-    return torch.cat((pbox, pconf, pcls), -1)
-
-
-def get_target_boxes(target, input_size):
-    """Decode YoloV3 Ground Truth to Bounding Boxes
-
-    Arguments:
-        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
-        input_size (int): Input Size of Image
-    
-    Retruns:
-        List: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
-    """
-    dst = []
-
-    for b in range(target.size(0)):
-        for t in torch.arange(target.size(1)):
-            if target[b, t].sum() <= 0:
-                continue
-            gx = target[b, t, 0] * input_size
-            gy = target[b, t, 1] * input_size
-            gw = target[b, t, 2] * input_size
-            gh = target[b, t, 3] * input_size
-
-            dst.append([gx, gy, gw, gh, 1., target[b, t, 4]])
-
-    return dst
-    
-
-def get_target_boxes_for_map(target, input_size):
-    """Decode YoloV3 Ground Truth to Bounding Boxes
-
-    Arguments:
-        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
-        input_size (int): Input Size of Image
-    
-    Retruns:
-        Dict: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
-    """
-    dst = dict()
-    
-    for b in range(target.size(0)):
-        tmp = []
-        for t in torch.arange(target.size(1)):
-            if target[b, t].sum() <= 0:
-                continue
-            gx = target[b, t, 0] * input_size
-            gy = target[b, t, 1] * input_size
-            gw = target[b, t, 2] * input_size
-            gh = target[b, t, 3] * input_size
-
-            tmp.append([gx, gy, gw, gh, 1., target[b, t, 4]])
-
-        if not tmp:
-            tmp = np.zeros((0, 6))
-        dst[b] = torch.FloatTensor(tmp)
-
-    return dst
-
-
 def mean_average_precision(true_boxes, pred_boxes, num_classes, iou_threshold=0.5):
     """Calculates mean average precision
 
@@ -665,128 +495,58 @@ def get_tagged_img(img, boxes, names_path, color):
     return img
 
 
-class DecodeYoloV3(nn.Module):
-    '''Decode Yolo V3 Predictions to bunding boxes
-    '''
+def get_target_boxes(target, input_size):
+    """Decode Yolo Ground Truth to Bounding Boxes
+
+    Arguments:
+        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+        input_size (int): Input Size of Image
     
-    def __init__(self, num_classes, anchors, input_size, conf_threshold=0.5):
-        super().__init__()
-        self.num_classes = num_classes
-        self.anchors = anchors
-        self.input_size = input_size
-        self.conf_threshold = conf_threshold
-        
-    def forward(self, x):
-        assert x[0].size(0) == 1
-        decode_preds = 0
-        for idx, pred in enumerate(x):
-            tmp_idx = 3 * idx
-            anchors = self.anchors[tmp_idx:tmp_idx+3]
-            decode_pred = decode_predictions(pred, self.num_classes, anchors, self.input_size)
+    Retruns:
+        List: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
+    """
+    dst = []
 
-            if idx == 0:
-                decode_preds = decode_pred
-            else:
-                decode_preds = torch.cat([decode_preds, decode_pred], dim=1)
-        
-        # boxes = nms_v1(decode_preds[0], conf_threshold=self.conf_threshold)
-        # boxes = nms_v2(decode_preds[0], conf_threshold=self.conf_threshold)
-        boxes = nms_v3(decode_preds[0], conf_threshold=self.conf_threshold)
-        
-        return boxes
+    for b in range(target.size(0)):
+        for t in torch.arange(target.size(1)):
+            if target[b, t].sum() <= 0:
+                continue
+            gx = target[b, t, 0] * input_size
+            gy = target[b, t, 1] * input_size
+            gw = target[b, t, 2] * input_size
+            gh = target[b, t, 3] * input_size
 
+            dst.append([gx, gy, gw, gh, 1., target[b, t, 4]])
 
-class MeanAveragePrecision:
-    def __init__(self, num_classes, anchors, input_size, conf_threshold):
-        self.all_true_boxes_variable = 0
-        self.all_pred_boxes_variable = 0
-        self.img_idx = 0
-        self.num_classes = num_classes
-        self.anchors = anchors
-        self.input_size = input_size
-        self.conf_threshold = conf_threshold
-
-    def reset_states(self):
-        self.all_true_boxes_variable = 0
-        self.all_pred_boxes_variable = 0
-        self.img_idx = 0
-
-    def update_state(self, y_true, y_preds):
-        true_boxes = get_target_boxes_for_map(y_true, self.input_size)
-
-        pred_boxes = 0
-        for idx, y_pred in enumerate(y_preds):
-            tmp_idx = 3 * idx
-            anchors = self.anchors[tmp_idx:tmp_idx+3]
-            tmp_pred_boxes = decode_predictions(y_pred, self.num_classes, anchors, self.input_size)
-
-            if idx == 0:
-                pred_boxes = tmp_pred_boxes
-            else:
-                pred_boxes = torch.cat([pred_boxes, tmp_pred_boxes], dim=1)
-
-        for idx in torch.arange(y_true.size(0)):
-            # pred_nms = nms_v1(pred_boxes[idx], conf_threshold=self.conf_threshold)
-            # pred_nms = nms_v2(pred_boxes[idx], conf_threshold=self.conf_threshold)
-            pred_nms = nms_v3(pred_boxes[idx], conf_threshold=self.conf_threshold)
-            pred_img_idx = torch.zeros([pred_nms.size(0), 1], dtype=torch.float32) + self.img_idx
-            if pred_nms.is_cuda:
-                pred_img_idx = pred_img_idx.cuda()
-            pred_concat = torch.cat([pred_img_idx, pred_nms], dim=1)
-            
-            true_nms = true_boxes[int(idx)]
-            if pred_nms.is_cuda:
-                true_nms = true_nms.cuda()
-            true_img_idx = torch.zeros([true_nms.size(0), 1], dtype=torch.float32) + self.img_idx
-            if true_nms.is_cuda:
-                true_img_idx = true_img_idx.cuda()
-            true_concat = torch.cat([true_img_idx, true_nms], dim=1)
-            
-            if self.img_idx == 0.:
-                self.all_true_boxes_variable = true_concat
-                self.all_pred_boxes_variable = pred_concat
-            else:
-                self.all_true_boxes_variable = torch.cat([self.all_true_boxes_variable, true_concat], dim=0)
-                self.all_pred_boxes_variable = torch.cat([self.all_pred_boxes_variable, pred_concat], dim=0)
-
-            self.img_idx += 1
-
-    def result(self):
-        return mean_average_precision(self.all_true_boxes_variable, self.all_pred_boxes_variable, self.num_classes)
-
-
-if __name__ == '__main__':
-    tbox = torch.zeros((1, 4))
-    tbox[0, :] = torch.tensor([0.5, 0.5, 4, 4])
-    pbox = torch.zeros((1, 4))
-    pbox[0, :] = torch.tensor([0.55, 0.55, 5, 5])
-    iou = bbox_iou(tbox, pbox, x1y1x2y2=True, CIoU=True)
-    print(iou)
-
-    # Test nms
-    import time
-    # tmp_boxes = torch.zeros((5, 6))
-    # tmp_boxes[0, :] = torch.tensor([100, 100, 50, 50, 0.8, 1.])
-    # tmp_boxes[1, :] = torch.tensor([100, 100, 50, 50, 0.7, 1.])
-    # tmp_boxes[2, :] = torch.tensor([60, 60, 50, 50, 0.6, 1.])
-    # tmp_boxes[3, :] = torch.tensor([100, 100, 50, 50, 0.8, 2.])
-    # tmp_boxes[4, :] = torch.tensor([100, 100, 50, 50, 0.7, 2.])
+    return dst
     
-    tmp_boxes = torch.randn((500, 6))
+
+def get_target_boxes_for_map(target, input_size):
+    """Decode Yolo Ground Truth to Bounding Boxes
+
+    Arguments:
+        target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
+        input_size (int): Input Size of Image
     
-    start = time.time()
-    box_1 = nms_v1(tmp_boxes)
-    print(f'Time: {1000*(time.time() - start)}ms')
-    # print(box_1)
+    Retruns:
+        Dict: encoded target bounding boxes, specified as [None, 6(cx, cy, w, h, confidence, class_idx)]
+    """
+    dst = dict()
     
-    start = time.time()
-    box_2 = nms_v2(tmp_boxes)
-    print(f'Time: {1000*(time.time() - start)}ms')
-    # print(box_2)
-    # print(box_2.shape)
-    
-    start = time.time()
-    box_3 = nms_v3(tmp_boxes)
-    print(f'Time: {1000*(time.time() - start)}ms')
-    # print(box_3)
-    
+    for b in range(target.size(0)):
+        tmp = []
+        for t in torch.arange(target.size(1)):
+            if target[b, t].sum() <= 0:
+                continue
+            gx = target[b, t, 0] * input_size
+            gy = target[b, t, 1] * input_size
+            gw = target[b, t, 2] * input_size
+            gh = target[b, t, 3] * input_size
+
+            tmp.append([gx, gy, gw, gh, 1., target[b, t, 4]])
+
+        if not tmp:
+            tmp = np.zeros((0, 6))
+        dst[b] = torch.FloatTensor(tmp)
+
+    return dst

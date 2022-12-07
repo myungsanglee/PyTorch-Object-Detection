@@ -12,7 +12,7 @@ from albumentations.pytorch import ToTensorV2
 from utils.yolo_utils import collater, get_tagged_img, get_target_boxes
 
 
-class YoloV2Dataset(Dataset):
+class YoloDataset(Dataset):
     def __init__(self, transforms, files_list):
         super().__init__()
 
@@ -45,7 +45,7 @@ class YoloV2Dataset(Dataset):
 
         return boxes
 
-class YoloV2DataModule(pl.LightningDataModule):
+class YoloDataModule(pl.LightningDataModule):
     def __init__(self, train_list, val_list, workers, input_size, batch_size):
         super().__init__()
         self.train_list = train_list
@@ -75,12 +75,12 @@ class YoloV2DataModule(pl.LightningDataModule):
             ToTensorV2(),
         ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
         
-        self.train_dataset = YoloV2Dataset(
+        self.train_dataset = YoloDataset(
             train_transforms, 
             self.train_list
         )
         
-        self.valid_dataset = YoloV2Dataset(
+        self.valid_dataset = YoloDataset(
             valid_transform, 
             self.val_list
         )
@@ -137,12 +137,12 @@ if __name__ == '__main__':
         ToTensorV2(),
     ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
     
-    train_dataset = YoloV2Dataset(
+    train_dataset = YoloDataset(
         train_transforms, 
         train_list
     )
     
-    valid_dataset = YoloV2Dataset(
+    valid_dataset = YoloDataset(
         valid_transform, 
         train_list
     )

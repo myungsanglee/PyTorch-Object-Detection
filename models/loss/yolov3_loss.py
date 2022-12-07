@@ -5,8 +5,13 @@ sys.path.append(os.getcwd())
 import torch
 from torch import nn
 
-from dataset.detection.yolov3_utils import bbox_iou
+from utils.yolo_utils import bbox_iou
 from models.loss.focal_loss import FocalLoss
+
+
+def smooth_BCE(eps=0.1):
+    # return positive, negative label smoothing BCE targets
+    return 1.0 - 0.5 * eps, 0.5 * eps
 
 
 class YoloV3Loss(nn.Module):
@@ -26,9 +31,9 @@ class YoloV3Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 5
-        self.lambda_noobj = 1
-        self.lambda_coord = 1
+        self.lambda_obj = 1
+        self.lambda_noobj = 0.5
+        self.lambda_coord = 5
         self.lambda_class = 1
         
         self.ignore_threshold = 0.5
@@ -36,6 +41,8 @@ class YoloV3Loss(nn.Module):
         self.mse_loss = nn.MSELoss(reduction='sum')
         self.bce_loss = nn.BCELoss(reduction='sum')
         # self.fc_loss = FocalLoss(reduction='sum')
+        
+        # self.positive_class_target, self.negative_class_target = smooth_BCE(0.1)
 
     def forward(self, input, target):
         """
@@ -182,6 +189,10 @@ class YoloV3Loss(nn.Module):
                 tconf[b, best_n, gj, gi] = 1
                 tcls[b, best_n, gj, gi, int(target[b, t, 4])] = 1
                 
+                # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf
+                # tcls[b, best_n, gj, gi, :] = self.negative_class_target
+                # tcls[b, best_n, gj, gi, int(target[b, t, 4])] = self.positive_class_target
+                
         return mask, noobj_mask, tx, ty, tw, th, tconf, tcls
 
 
@@ -273,6 +284,7 @@ class YoloV3LossV2(nn.Module):
             loss += box_loss + object_loss + no_object_loss + class_loss
             
         loss /= batch_size
+        # loss *= batch_size
         
         return loss
 

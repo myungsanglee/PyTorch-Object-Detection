@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from dataset.detection.yolov3_utils import collater, get_tagged_img, get_target_boxes
+from utils.yolo_utils import collater, get_tagged_img, get_target_boxes
 
 
 class YoloV3Dataset(Dataset):
@@ -110,10 +110,10 @@ class YoloV3DataModule(pl.LightningDataModule):
 
 if __name__ == '__main__':
     input_size = 416
-    # train_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
-    # val_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
-    train_list = '/home/fssv2/myungsang/datasets/focus/221102_D/front/neg.txt'
-    val_list = '/home/fssv2/myungsang/datasets/focus/221102_D/front/neg.txt'
+    train_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
+    val_list = '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
+    # train_list = '/home/fssv2/myungsang/datasets/focus/221102_D/front/neg.txt'
+    # val_list = '/home/fssv2/myungsang/datasets/focus/221102_D/front/neg.txt'
     
 
 
@@ -130,6 +130,7 @@ if __name__ == '__main__':
         #     p=1
         # ),
         A.RandomResizedCrop(input_size, input_size, (0.5, 1), (0.4, 1.6)),
+        # A.Cutout(num_holes=2, max_h_size=100, max_w_size=100, p=1),
         # A.Resize(input_size, input_size, always_apply=True),
         A.Normalize(0, 1),
         ToTensorV2(),

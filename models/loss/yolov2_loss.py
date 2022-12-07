@@ -5,7 +5,7 @@ sys.path.append(os.getcwd())
 import torch
 from torch import nn
 
-from dataset.detection.yolov2_utils import bbox_iou
+from utils.yolo_utils import bbox_iou
 
 
 def smooth_BCE(eps=0.1):

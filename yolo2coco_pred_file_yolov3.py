@@ -12,7 +12,7 @@ from pycocotools.cocoeval import COCOeval
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import DecodeYoloV3V3
+from utils.yolov3_utils import DecodeYoloV3
 from utils.module_select import get_model
 
 
@@ -54,7 +54,7 @@ def make_pred_result_file_for_coco_map_calculator(cfg, ckpt, json_path, save_dir
     )
     model_module.eval()
 
-    yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     with open(cfg['names'], 'r') as f:
         class_name_list = f.read().splitlines()

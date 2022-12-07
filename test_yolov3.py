@@ -8,12 +8,12 @@ from torchinfo import summary
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_dataset import YoloV3DataModule
+from dataset.detection.yolo_dataset import YoloDataModule
 from utils.module_select import get_model
 
 
 def test(cfg, ckpt):
-    data_module = YoloV3DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 

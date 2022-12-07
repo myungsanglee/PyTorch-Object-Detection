@@ -3,11 +3,11 @@ import platform
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, StochasticWeightAveraging, QuantizationAwareTraining
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.plugins import DDPPlugin
-import torchsummary
+from torchinfo import summary
 
-from dataset.detection.yolov1_dataset import YoloV1DataModule
+from dataset.detection.yolo_dataset import YoloDataModule
 from module.yolov1_detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
 from utils.utility import make_model_name
@@ -15,41 +15,28 @@ from utils.module_select import get_model
 from utils.yaml_helper import get_configs
 
 
-def add_experimental_callbacks(cfg, train_callbacks):
-    options = {
-        'SWA': StochasticWeightAveraging(),
-        'QAT': QuantizationAwareTraining()
-    }
-    callbacks = cfg['experimental_options']['callbacks']
-    if callbacks:
-        for option in callbacks:
-            train_callbacks.append(options[option])
-
-    return train_callbacks
-
-
 def train(cfg):
-    data_module = YoloV1DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 
         input_size=cfg['input_size'],
-        batch_size=cfg['batch_size'],
+        batch_size=cfg['batch_size']
+    )
+
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'],
+        features_only=True
+    )
+    
+    model = YoloV1(
+        backbone_features_module=backbone_features_module,
         num_classes=cfg['num_classes'],
         num_boxes=cfg['num_boxes']
     )
-
-    backbone = get_model(cfg['backbone'])
     
-    model = YoloV1(
-        backbone=backbone,
-        num_classes=cfg['num_classes'],
-        num_boxes=cfg['num_boxes'],
-        in_channels=cfg['in_channels'],
-        input_size=cfg['input_size']
-    )
-    
-    torchsummary.summary(model, (cfg['in_channels'], cfg['input_size'], cfg['input_size']), batch_size=1, device='cpu')
+    summary(model, input_size=(1, cfg['in_channels'], cfg['input_size'], cfg['input_size']), device='cpu')
 
     model_module = YoloV1Detector(
         model=model, 
@@ -57,15 +44,18 @@ def train(cfg):
     )
 
     callbacks = [
-        LearningRateMonitor(logging_interval='epoch'),
+        LearningRateMonitor(logging_interval='step'),
         ModelCheckpoint(
             monitor='val_loss', 
             save_last=True,
             every_n_epochs=cfg['save_freq']
+        ),
+        EarlyStopping(
+            monitor='val_loss',
+            patience=30,
+            verbose=True
         )
     ]
-
-    # callbacks = add_expersimental_callbacks(cfg, callbacks)
 
     trainer = pl.Trainer(
         max_epochs=cfg['epochs'],

@@ -7,8 +7,8 @@ from tqdm import tqdm
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import DecodeYoloV3V3
-from dataset.detection.yolov3_dataset import YoloV3DataModule
+from utils.yolov3_utils import DecodeYoloV3
+from dataset.detection.yolo_dataset import YoloDataModule
 from utils.module_select import get_model
 
 
@@ -16,7 +16,7 @@ def make_pred_result_file_for_public_map_calculator(cfg, ckpt, save_dir):
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
 
-    data_module = YoloV3DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 
@@ -49,7 +49,7 @@ def make_pred_result_file_for_public_map_calculator(cfg, ckpt, save_dir):
     )
     model_module.eval()
 
-    yolov3_decoder = DecodeYoloV3V3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
+    yolov3_decoder = DecodeYoloV3(cfg['num_classes'], cfg['anchors'], cfg['input_size'], conf_threshold=cfg['conf_threshold'])
 
     with open(cfg['names'], 'r') as f:
         class_name_list = f.readlines()

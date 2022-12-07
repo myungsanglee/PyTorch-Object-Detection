@@ -9,8 +9,9 @@ import cv2
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
-from dataset.detection.yolov3_utils import get_tagged_img, DecodeYoloV3, get_target_boxes
-from dataset.detection.yolov3_dataset import YoloV3DataModule
+from utils.yolo_utils import get_tagged_img, get_target_boxes
+from utils.yolov3_utils import DecodeYoloV3
+from dataset.detection.yolo_dataset import YoloDataModule
 from utils.module_select import get_model
 
 
@@ -18,7 +19,7 @@ def inference(cfg, ckpt):
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
 
-    data_module = YoloV3DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 

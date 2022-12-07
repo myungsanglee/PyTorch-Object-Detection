@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, Ea
 from pytorch_lightning.plugins import DDPPlugin
 from torchinfo import summary
 
-from dataset.detection.yolov3_dataset import YoloV3DataModule
+from dataset.detection.yolo_dataset import YoloDataModule
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
 from utils.utility import make_model_name
@@ -18,7 +18,7 @@ from utils.yaml_helper import get_configs
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def train(cfg):
-    data_module = YoloV3DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 

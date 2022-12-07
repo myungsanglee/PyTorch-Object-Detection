@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, Ea
 from pytorch_lightning.plugins import DDPPlugin
 from torchinfo import summary
 
-from dataset.detection.yolov2_dataset import YoloV2DataModule
+from dataset.detection.yolo_dataset import YoloDataModule
 from module.yolov2_detector import YoloV2Detector
 from models.detector.yolov2 import YoloV2
 from utils.utility import make_model_name
@@ -16,7 +16,7 @@ from utils.yaml_helper import get_configs
 
 
 def train(cfg):
-    data_module = YoloV2DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 

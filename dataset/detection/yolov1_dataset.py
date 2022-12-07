@@ -6,10 +6,10 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
 import pytorch_lightning as pl
-import albumentations
-import albumentations.pytorch
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
-from dataset.detection.yolov1_utils import decode_predictions_numpy, non_max_suppression_numpy, get_tagged_img
+from dataset.detection.yolov1_utils import decode_predictions_numpy, non_max_suppression_numpy, get_tagged_img, get_target_boxes
 
 
 class YoloV1Dataset(Dataset):
@@ -30,6 +30,8 @@ class YoloV1Dataset(Dataset):
     def __getitem__(self, index):
         img_file = self.imgs[index]
         img = cv2.imread(img_file)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
         boxes = self._get_boxes(img_file.replace('.jpg', '.txt'))
         
         transformed = self.transforms(image=img, bboxes=boxes)
@@ -86,24 +88,25 @@ class YoloV1DataModule(pl.LightningDataModule):
         self.num_boxes = num_boxes
         
     def setup(self, stage=None):
-        train_transforms = albumentations.Compose([
-            albumentations.HorizontalFlip(),
-            albumentations.ColorJitter(
+        train_transforms = A.Compose([
+            A.HorizontalFlip(),
+            A.CLAHE(),
+            A.ColorJitter(
                 brightness=0.5,
                 contrast=0.2,
                 saturation=0.5,
-                hue=0.1    
+                hue=0.1
             ),
-            albumentations.RandomResizedCrop(self.input_size, self.input_size, (0.8, 1)),
-            albumentations.Normalize(0, 1),
-            albumentations.pytorch.ToTensorV2(),
-        ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
+            A.RandomResizedCrop(self.input_size, self.input_size, (0.5, 1), (0.4, 1.6)),
+            A.Normalize(0, 1),
+            ToTensorV2(),
+        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
 
-        valid_transform = albumentations.Compose([
-            albumentations.Resize(self.input_size, self.input_size, always_apply=True),
-            albumentations.Normalize(0, 1),
-            albumentations.pytorch.ToTensorV2(),
-        ], bbox_params=albumentations.BboxParams(format='yolo', min_visibility=0.1))
+        valid_transform = A.Compose([
+            A.Resize(self.input_size, self.input_size),
+            A.Normalize(0, 1),
+            ToTensorV2(),
+        ], bbox_params=A.BboxParams(format='yolo', min_visibility=0.3))
         
         self.train_dataset = YoloV1Dataset(
             train_transforms, 
@@ -159,11 +162,15 @@ if __name__ == '__main__':
         
         img = sample['image'][0].numpy()   
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         
-        label = sample['label'].numpy()
-        boxes = non_max_suppression_numpy(decode_predictions_numpy(label, 20, 2)[0])
+        # label = sample['label'].numpy()
+        # boxes = non_max_suppression_numpy(decode_predictions_numpy(label, 20, 2)[0])
         
-        img = get_tagged_img(img, boxes, os.path.join(os.getcwd(), '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'), (0, 255, 0))
+        boxes = get_target_boxes(sample['label'], 20, 2, 448)
+        # print(boxes)
+        
+        img = get_tagged_img(img, boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 255, 0))
         
         cv2.imshow('test', img)
         key = cv2.waitKey(0)
