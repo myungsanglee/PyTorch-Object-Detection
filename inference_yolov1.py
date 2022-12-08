@@ -12,8 +12,9 @@ import cv2
 from utils.yaml_helper import get_configs
 from module.yolov1_detector import YoloV1Detector
 from models.detector.yolov1 import YoloV1
-from dataset.detection.yolov1_utils import get_tagged_img, DecodeYoloV1
-from dataset.detection.yolov1_dataset import YoloV1DataModule
+from utils.yolo_utils import get_tagged_img, get_target_boxes
+from utils.yolov1_utils import DecodeYoloV1
+from dataset.detection.yolo_dataset import YoloDataModule
 from utils.module_select import get_model
 
 
@@ -21,26 +22,26 @@ def test(cfg, ckpt):
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
 
-    data_module = YoloV1DataModule(
+    data_module = YoloDataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 
         input_size=cfg['input_size'],
-        batch_size=1,
-        num_classes=cfg['num_classes'],
-        num_boxes=cfg['num_boxes']
+        batch_size=1
     )
     data_module.prepare_data()
     data_module.setup()
 
-    backbone = get_model(cfg['backbone'])
+    backbone_features_module = get_model(cfg['backbone'])(
+        pretrained=cfg['backbone_pretrained'], 
+        devices=cfg['devices'],
+        features_only=True
+    )
     
     model = YoloV1(
-        backbone=backbone,
+        backbone_features_module=backbone_features_module,
         num_classes=cfg['num_classes'],
-        num_boxes=cfg['num_boxes'],
-        in_channels=cfg['in_channels'],
-        input_size=cfg['input_size']
+        num_boxes=cfg['num_boxes']
     )
     
     if torch.cuda.is_available:
@@ -53,12 +54,12 @@ def test(cfg, ckpt):
     )
     model_module.eval()
 
-    yolov1_decoder = DecodeYoloV1(cfg['num_classes'], cfg['num_boxes'], conf_threshold=0.6)
+    yolov1_decoder = DecodeYoloV1(cfg['num_classes'], cfg['num_boxes'], cfg['input_size'], cfg['conf_threshold'])
 
     # Inference
     for sample in data_module.val_dataloader():
-        batch_x = sample['image']
-        batch_y = sample['label']
+        batch_x = sample['img']
+        batch_y = sample['annot']
 
         if torch.cuda.is_available:
             batch_x = batch_x.cuda()
@@ -75,13 +76,15 @@ def test(cfg, ckpt):
         else:
             img = batch_x[0].numpy()   
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
-    
-        true_boxes = yolov1_decoder(batch_y)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         
-        tagged_img = get_tagged_img(img, boxes, cfg['names'], (0, 255, 0))
-        tagged_img = get_tagged_img(tagged_img, true_boxes, cfg['names'], (0, 0, 255))
+        true_boxes = get_target_boxes(batch_y, cfg['input_size'])
+        
+        pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
+        true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
 
-        cv2.imshow('test', tagged_img)
+        cv2.imshow('Prediction', pred_img)
+        cv2.imshow('GT', true_img)
         key = cv2.waitKey(0)
         if key == 27:
             break

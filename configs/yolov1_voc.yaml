@@ -22,7 +22,7 @@ save_freq: 5
 
 trainer_options:
   check_val_every_n_epoch: 5
-  num_sanity_val_steps: 1
+  num_sanity_val_steps: 0
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
 devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus

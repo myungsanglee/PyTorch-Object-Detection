@@ -28,9 +28,9 @@ class YoloV1Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 1
-        self.lambda_noobj = 0.5
-        self.lambda_coord = 5
+        self.lambda_obj = 5
+        self.lambda_noobj = 1
+        self.lambda_coord = 1
         self.lambda_class = 1
         
         self.mse_loss = nn.MSELoss(reduction='sum')
@@ -113,8 +113,7 @@ class YoloV1Loss(nn.Module):
         return loss
 
     def _encode_target(self, target, num_classes, num_boxes, layer_w, layer_h):
-        """YoloV2 Loss Function
-
+        """
         Arguments:
             target (Tensor): [batch, max_num_annots, 5(cx, cy, w, h, cid)]
             num_classes (int): Number of classes in the dataset
@@ -124,14 +123,6 @@ class YoloV1Loss(nn.Module):
         
         Retruns:
             y_true (Tensor): Ground Truth Tensor, [batch_size, layer_h, layer_w, num_boxes*5 + num_classes]
-            mask (Tensor): Objectness Mask Tensor, [batch_size, num_anchors, layer_h, layer_w]
-            noobj_mask (Tensor): No Objectness Mask Tensor, [batch_size, num_anchors, layer_h, layer_w]
-            tx (Tensor): Ground Truth X, [batch_size, num_anchors, layer_h, layer_w]
-            ty (Tensor): Ground Truth Y, [batch_size, num_anchors, layer_h, layer_w]
-            tw (Tensor): Ground Truth W, [batch_size, num_anchors, layer_h, layer_w]
-            th (Tensor): Ground Truth H, [batch_size, num_anchors, layer_h, layer_w]
-            tconf (Tensor): Ground Truth Confidence Score, [batch_size, num_anchors, layer_h, layer_w]
-            tcls (Tensor): Ground Truth Class index, [batch_size, num_anchors, layer_h, layer_w, num_classes]
         """
         batch_size = target.size(0)
         

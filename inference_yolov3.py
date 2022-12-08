@@ -76,7 +76,7 @@ def inference(cfg, ckpt):
         img = (np.transpose(img, (1, 2, 0))*255.).astype(np.uint8).copy()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         
-        true_boxes = get_target_boxes(batch_y, 416)
+        true_boxes = get_target_boxes(batch_y, cfg['input_size'])
         
         pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
         true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))

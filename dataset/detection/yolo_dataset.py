@@ -177,8 +177,8 @@ if __name__ == '__main__':
         origin_img = cv2.cvtColor(origin_img, cv2.COLOR_RGB2BGR)
 
 
-        train_true_boxes = get_target_boxes(train_y, 416)
-        origin_true_boxes = get_target_boxes(origin_y, 416)
+        train_true_boxes = get_target_boxes(train_y, input_size)
+        origin_true_boxes = get_target_boxes(origin_y, input_size)
         
         train_img = get_tagged_img(train_img, train_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
         origin_img = get_tagged_img(origin_img, origin_true_boxes, '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names', (0, 0, 255))
