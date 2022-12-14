@@ -4,7 +4,6 @@ sys.path.append(os.getcwd())
 
 import torch
 from torch import nn
-import numpy as np
 
 from utils.yolo_utils import bbox_iou
 
@@ -28,9 +27,9 @@ class YoloV1Loss(nn.Module):
 
         # These are from Yolo paper, signifying how much we should
         # pay loss for no object (noobj) and the box coordinates (coord)
-        self.lambda_obj = 5
-        self.lambda_noobj = 1
-        self.lambda_coord = 1
+        self.lambda_obj = 1
+        self.lambda_noobj = 0.5
+        self.lambda_coord = 5
         self.lambda_class = 1
         
         self.mse_loss = nn.MSELoss(reduction='sum')
@@ -105,7 +104,7 @@ class YoloV1Loss(nn.Module):
         # ================== #
         #   FOR CLASS LOSS   #
         # ================== #
-        class_loss = self.lambda_class * self.mse_loss(pcls[mask.squeeze(dim=-1)==1], tcls[mask.squeeze(dim=-1)==1])
+        class_loss = self.lambda_class * self.bce_loss(pcls[mask.squeeze(dim=-1)==1], tcls[mask.squeeze(dim=-1)==1])
         # print(f"class_loss: {class_loss}")
 
         loss = (box_loss + object_loss + no_object_loss + class_loss) / batch_size
@@ -145,25 +144,3 @@ class YoloV1Loss(nn.Module):
                     y_true[b, gj, gi, self.num_classes] = 1 # confidence
                     
         return y_true
-
-
-if __name__ == "__main__":
-    y_true = np.zeros((1, 7, 7, 13))
-    y_true[:, 0, 0, 2] = 1 # class
-    y_true[:, 0, 0, 3] = 1 # confidence
-    y_true[:, 0, 0, 4:8] = (0.5, 0.5, 0.1, 0.1)
-    print("y_true:\n{}".format(y_true))
-
-    y_pred = np.zeros((1, 7, 7, 13))
-    y_pred[:, 0, 0, 2] = 0.6  # class
-    y_pred[:, 0, 0, 3] = 0.7  # confidence
-    y_pred[:, 0, 0, 4:8] = (0.49, 0.49, 0.09, 0.09)
-    y_pred[:, 0, 0, 9] = 0.4  # confidence
-    y_pred[:, 0, 0, 9:13] = (0.45, 0.45, 0.09, 0.09)
-    print("y_pred:\n{}".format(y_pred))
-
-    y_true = torch.as_tensor(y_true, dtype=torch.float32)
-    y_pred = torch.as_tensor(y_pred, dtype=torch.float32)
-
-    loss = YoloV1Loss(num_classes=3, num_boxes=2)
-    print(loss(y_true, y_pred))

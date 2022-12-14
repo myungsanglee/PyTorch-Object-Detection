@@ -57,6 +57,7 @@ def test(cfg, ckpt):
     yolov1_decoder = DecodeYoloV1(cfg['num_classes'], cfg['num_boxes'], cfg['input_size'], cfg['conf_threshold'])
 
     # Inference
+    tmp_num = 0
     for sample in data_module.val_dataloader():
         batch_x = sample['img']
         batch_y = sample['annot']
@@ -83,11 +84,16 @@ def test(cfg, ckpt):
         pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
         true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
 
-        cv2.imshow('Prediction', pred_img)
         cv2.imshow('GT', true_img)
+        cv2.imshow('Prediction', pred_img)
         key = cv2.waitKey(0)
         if key == 27:
             break
+        elif key == ord('c'):
+            save_img_dir = f'{os.sep}'.join(ckpt.split(os.sep)[:-2])
+            tmp_num += 1
+            img_path = os.path.join(save_img_dir, f'captured_image_{tmp_num:02d}.jpg')
+            cv2.imwrite(img_path, pred_img)
     
     cv2.destroyAllWindows()
 
