@@ -1,6 +1,7 @@
 model : 'yolov3'
 backbone: 'darknet19'
 backbone_pretrained: '' # 'tiny-imagenet' or '' 
+# backbone_pretrained: '/home/fssv2/myungsang/my_projects/PyTorch-Object-Detection/ckpt/darknet19-tiny-imagenet.ckpt' # 'tiny-imagenet' or '' 
 dataset_name : 'voc'
 input_size: 416
 in_channels: 3
@@ -16,7 +17,8 @@ anchors : [
   [156, 198],
   [373, 326]
 ]
-conf_threshold: 0.25
+# conf_threshold: 0.25
+conf_threshold: 0.001
 
 epochs: 365
 

@@ -5,24 +5,37 @@ dataset_name : 'focus-front'
 input_size: 416
 in_channels: 3
 num_classes : 1
+# anchors : [
+#   [19, 66], 
+#   [50, 88], 
+#   [27, 162], 
+#   [45, 232], 
+#   [97, 142],
+#   [65, 263],
+#   [88, 308],
+#   [123, 344],
+#   [184, 374]
+# ]
+
 anchors : [
-  [19, 66], 
-  [50, 88], 
-  [27, 162], 
-  [45, 232], 
-  [97, 142],
-  [65, 263],
-  [88, 308],
-  [123, 344],
-  [184, 374]
+  [19, 64], 
+  [27, 152], 
+  [53, 94], 
+  [44, 229], 
+  [107, 142],
+  [64, 258],
+  [87, 306],
+  [123, 341],
+  [185, 371]
 ]
-conf_threshold: 0.25
+
+conf_threshold: 0.4
 
 epochs: 100
 
-train_list : '/home/fssv2/myungsang/datasets/focus/221102_D/front/train_with_neg.txt'
-val_list : '/home/fssv2/myungsang/datasets/focus/221102_D/front/val.txt'
-names : '/home/fssv2/myungsang/datasets/focus/221102_D/front/focus.names'
+train_list : '/home/fssv2/myungsang/datasets/focus/230102_E/front/version_09.txt'
+val_list : '/home/fssv2/myungsang/datasets/focus/230102_E/front/test_v2.txt'
+names : '/home/fssv2/myungsang/datasets/focus/230102_E/front/focus.names'
 workers: 32 # number of workers to generate data
 batch_size: 64
 
@@ -34,7 +47,7 @@ trainer_options:
   num_sanity_val_steps: 0
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'sgd'
 optimizer_options:
@@ -45,8 +58,8 @@ optimizer_options:
 
 scheduler: 'yolo_lr'
 scheduler_options:
-  burn_in: 4000
-  steps: [64000]
+  burn_in: 2000
+  steps: [32000]
   scales: [0.1]
 
 # scheduler: 'multi_step'
