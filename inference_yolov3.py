@@ -12,6 +12,7 @@ from models.detector.yolov3 import YoloV3
 from utils.yolo_utils import get_tagged_img, get_target_boxes
 from utils.yolov3_utils import DecodeYoloV3
 from dataset.detection.yolo_dataset import YoloDataModule
+from dataset.detection.datasets import DataModule
 from utils.module_select import get_model
 
 
@@ -19,7 +20,7 @@ def inference(cfg, ckpt):
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"]= ','.join(str(num) for num in cfg['devices'])
 
-    data_module = YoloDataModule(
+    data_module = DataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 

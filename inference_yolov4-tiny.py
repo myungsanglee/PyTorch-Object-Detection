@@ -9,7 +9,7 @@ import cv2
 from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov4_tiny import YoloV4TinyV4
-from utils.yolo_utils import get_tagged_img, get_target_boxes
+from utils.yolo_utils import get_tagged_img, get_target_boxes, get_tagged_lpr_img
 from utils.yolov3_utils import DecodeYoloV3
 from dataset.detection.yolo_dataset import YoloDataModule
 
@@ -69,8 +69,8 @@ def inference(cfg, ckpt):
         
         true_boxes = get_target_boxes(batch_y, cfg['input_size'])
         
-        pred_img = get_tagged_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
-        true_img = get_tagged_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
+        pred_img = get_tagged_lpr_img(img.copy(), boxes, cfg['names'], (0, 255, 0))
+        true_img = get_tagged_lpr_img(img.copy(), true_boxes, cfg['names'], (0, 0, 255))
 
         cv2.imshow('Prediction', pred_img)
         cv2.imshow('GT', true_img)

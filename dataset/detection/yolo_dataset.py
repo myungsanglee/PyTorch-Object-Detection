@@ -125,7 +125,8 @@ if __name__ == '__main__':
         #     hue=0.1,
         #     p=1
         # ),
-        A.RandomResizedCrop(input_size, input_size, (0.7, 1)),
+        A.Affine(scale=(0.5, 1.5)),
+        # A.RandomResizedCrop(input_size, input_size, (0.7, 1)),
         # A.Resize(input_size, input_size, always_apply=True),
         A.Normalize(0, 1),
         ToTensorV2(),

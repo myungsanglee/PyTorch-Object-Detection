@@ -1,30 +1,28 @@
-model : 'yolov3'
-backbone: 'darknet19'
+model : 'yolov4-tiny'
+backbone: ''
 backbone_pretrained: '' # 'tiny-imagenet' or '' 
-# backbone_pretrained: '/home/fssv2/myungsang/my_projects/PyTorch-Object-Detection/ckpt/darknet19-tiny-imagenet.ckpt' # 'tiny-imagenet' or '' 
-dataset_name : 'voc'
-input_size: 416
+dataset_name : 'lpr'
+input_size: 224
 in_channels: 3
-num_classes : 20
+num_classes : 72
 anchors : [
-  [10, 13], 
-  [16, 30], 
-  [33, 23], 
-  [30, 61], 
-  [62, 45],
-  [59, 119],
-  [116, 90],
-  [156, 198],
-  [373, 326]
+  [17, 146], 
+  [36, 83], 
+  [22, 173], 
+  [24, 169], 
+  [24, 169],
+  [24, 169],
+  [26, 169],
+  [37, 121],
+  [31, 173]
 ]
 conf_threshold: 0.25
 
-epochs: 365
+epochs: 200
 
-train_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/train.txt'
-val_list : '/home/fssv2/myungsang/datasets/voc/yolo_format/val.txt'
-# val_list : '/home/fssv2/myungsang/datasets/tmp/val.txt'
-names : '/home/fssv2/myungsang/datasets/voc/yolo_format/voc.names'
+train_list : '/home/fssv2/myungsang/datasets/lpr/train.txt'
+val_list : '/home/fssv2/myungsang/datasets/lpr/val.txt'
+names : '/home/fssv2/myungsang/datasets/lpr/lpr_kr.names'
 workers: 32 # number of workers to generate data
 batch_size: 64
 
@@ -36,7 +34,7 @@ trainer_options:
   num_sanity_val_steps: 0
 
 accelerator: 'gpu' # 'auto', 'gpu', 'cpu'
-devices: [1] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
+devices: [0] # 'auto': use all, [0]: use 0 gpu, [0, 1]: use 0, 1 gpus
 
 optimizer: 'sgd'
 optimizer_options:
@@ -47,8 +45,8 @@ optimizer_options:
 
 scheduler: 'yolo_lr'
 scheduler_options:
-  burn_in: 1000
-  steps: [40000]
+  burn_in: 6000
+  steps: [270000]
   scales: [0.1]
 
 # scheduler: 'multi_step'

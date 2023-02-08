@@ -5,6 +5,7 @@ import torch
 from torchvision.ops import batched_nms
 import numpy as np
 import cv2
+from PIL import ImageFont, ImageDraw, Image
 
 
 def collater(data):
@@ -603,12 +604,53 @@ def get_tagged_img(img, boxes, names_path, color):
         # print(f'{class_name}: {xmin}, {ymin}, {xmax}, {ymax}')
 
         img = cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color=color, thickness=1)
-        img = cv2.putText(img, "{:s}, {:.2f}".format(class_name, confidence_score), (xmin, ymin + 20),
+        img = cv2.putText(img, 
+                          f'{class_name}, {confidence_score:.2f}',
+                          (xmin, ymin + 20),
                           fontFace=cv2.FONT_HERSHEY_PLAIN,
                           fontScale=1,
                           color=color)
     # print(f'')
     return img
+
+
+def get_tagged_lpr_img(img, boxes, names_path, color):
+    """tagging result on img
+
+    Arguments:
+        img (Numpy Array): Image array
+        boxes (Tensor): boxes after performing NMS (None, 6)
+        names_path (String): path of label names file
+        color (tuple): boxes color
+        
+    Returns:
+        Numpy Array: tagged image array
+    """
+    with open(names_path, 'r') as f:
+        class_name_list = f.readlines()
+    class_name_list = [x.strip() for x in class_name_list]
+    
+    font = ImageFont.truetype('malgun.ttf', 20)
+    
+    img = Image.fromarray(img)
+    draw = ImageDraw.Draw(img)
+    
+    for bbox in boxes:
+        class_name = class_name_list[int(bbox[-1])]
+        confidence_score = bbox[4]
+        cx = bbox[0]
+        cy = bbox[1]
+        w = bbox[2]
+        h = bbox[3]
+        xmin = int((cx - (w / 2)))
+        ymin = int((cy - (h / 2)))
+        xmax = int((cx + (w / 2)))
+        ymax = int((cy + (h / 2)))
+
+        draw.rectangle((xmin, ymin, xmax, ymax), outline=color, width=1)
+        draw.text(((xmin, ymin)), f'{class_name}', font=font, fill=color)
+
+    return np.array(img)
 
 
 def get_target_boxes(target, input_size):

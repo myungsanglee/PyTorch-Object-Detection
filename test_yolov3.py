@@ -9,11 +9,12 @@ from utils.yaml_helper import get_configs
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
 from dataset.detection.yolo_dataset import YoloDataModule
+from dataset.detection.datasets import DataModule
 from utils.module_select import get_model
 
 
 def test(cfg, ckpt):
-    data_module = YoloDataModule(
+    data_module = DataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 

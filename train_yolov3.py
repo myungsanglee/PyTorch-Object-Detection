@@ -9,6 +9,7 @@ from pytorch_lightning.plugins import DDPPlugin
 from torchinfo import summary
 
 from dataset.detection.yolo_dataset import YoloDataModule
+from dataset.detection.datasets import DataModule
 from module.yolov3_detector import YoloV3Detector
 from models.detector.yolov3 import YoloV3
 from utils.utility import make_model_name
@@ -18,7 +19,7 @@ from utils.yaml_helper import get_configs
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 def train(cfg):
-    data_module = YoloDataModule(
+    data_module = DataModule(
         train_list=cfg['train_list'], 
         val_list=cfg['val_list'],
         workers=cfg['workers'], 
