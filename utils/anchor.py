@@ -79,9 +79,9 @@ def check_anchors(cfg, thr=4.0):
     anchors = torch.tensor(cfg['anchors'], dtype=torch.float32)  # current anchors
     bpr, aat = metric(anchors)
     s = f'\n{aat:.2f} anchors/target, {bpr:.3f} Best Possible Recall (BPR). '
-    # if bpr > 0.98:  # threshold to recompute
-    if bpr < 0.98:  # threshold to recompute
+    if bpr > 0.98:  # threshold to recompute
         print(f'{s}Current anchors are a good fit to dataset ✅')
+        anchors = np.array(anchors, dtype=np.float32)
     else:
         print(f'{s}Anchors are a poor fit to dataset ⚠️, attempting to improve...')
         na = anchors.size(0)  # number of anchors

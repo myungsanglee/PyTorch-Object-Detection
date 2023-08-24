@@ -169,9 +169,9 @@ if __name__ == '__main__':
     
     # Get Model
     # model = darknet19(pretrained='tiny-imagenet')
-    model = darknet19(pretrained='tiny-imagenet', features_only=True, out_indices=[4, 5])
+    # model = darknet19(pretrained='tiny-imagenet', features_only=True, out_indices=[4, 5])
     # model = darknet19(pretrained='tiny-imagenet', features_only=True)
-    # model = darknet19(pretrained='', features_only=True)
+    model = darknet19(pretrained='', features_only=True)
     
     # Check param values
     # for m1 in model.children():
